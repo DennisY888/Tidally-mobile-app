@@ -16,7 +16,8 @@ import { db } from '../../config/FirebaseConfig'
 export default function WorkoutDetails() {
 
     const params = useLocalSearchParams();
-    const workout = {
+    const workout = {     // all the workout data passed not as prop, but params for screen-to-screen navigation
+                          // props used for parent-child relationship
         ...params,
         exercises: JSON.parse(params.exercises),
         user: JSON.parse(params.user)
@@ -24,6 +25,7 @@ export default function WorkoutDetails() {
     const navigation = useNavigation()
     const {user} = useUser()
     const router = useRouter()
+
 
     // whenever this component loads, makes the header transparent
     useEffect(() => {
@@ -34,43 +36,78 @@ export default function WorkoutDetails() {
     }, [])
 
 
-    // Used to Initiate the chat between two users
-    const InitiateChat = async() => {
-    const docId1 = user?.primaryEmailAddress?.emailAddress+'_'+workout?.email
-    const docId2 = workout?.email+'_'+user?.primaryEmailAddress?.emailAddress
-    const q = query(collection(db,'Chat'), where('id','in',[docId1,docId2]))
-    const querySnapshot = await getDocs(q)
-    
-    querySnapshot.forEach(doc => {
-        router.push({
-        pathname: '/chat',
-        params: {id: doc.id}
+    // creates two documents
+const InitiateChat = async() => {
+    try {
+        // Verify required data exists
+        if (!user?.primaryEmailAddress?.emailAddress || !workout?.user?.email || 
+            !user?.imageUrl || !user?.fullName || 
+            !workout?.user?.imageUrl || !workout?.user?.name) {
+            console.error("Missing required user data:", {
+                currentUser: {
+                    email: user?.primaryEmailAddress?.emailAddress,
+                    image: user?.imageUrl,
+                    name: user?.fullName
+                },
+                workoutUser: {
+                    email: workout?.user?.email,
+                    image: workout?.user?.imageUrl,
+                    name: workout?.user?.name
+                }
+            });
+            return;
+        }
+ 
+        // the doc id format is: {current_user_email}_{creator_user_email}
+        const docId1 = user.primaryEmailAddress.emailAddress+'_'+workout.user.email
+        // same as above but reversed
+        const docId2 = workout.user.email+'_'+user.primaryEmailAddress.emailAddress
+        const q = query(collection(db,'Chat'), where('id','in',[docId1,docId2]))  // OR condition
+        
+        const querySnapshot = await getDocs(q)
+        querySnapshot.forEach(doc => {
+            console.log("Doc found")
+            return router.push({
+                pathname: 'chat-details',
+                params: {id: doc.id}
+            });
         })
-    })
+ 
+        // if document doesn't exist yet, create a new one
+        if (querySnapshot.docs?.length == 0) {
+            await setDoc(doc(db,'Chat',docId1), {
+                id: docId1,
+                users: [    // an array of both current user and creator data
+                    {   
+                        email: user.primaryEmailAddress.emailAddress,
+                        imageUrl: user.imageUrl,
+                        name: user.fullName
+                    },
+                    {
+                        email: workout.user.email,
+                        imageUrl: workout.user.imageUrl,
+                        name: workout.user.name
+                    }
+                ],
+                userIds: [user.primaryEmailAddress.emailAddress, workout.user.email]
+            })
+            console.log("Doc found")
+            return router.push({
+                pathname: 'chat-details',
+                params: {id: docId1}
+            });
+        }
+    } catch (error) {
+        console.error("InitiateChat error:", error);
+        console.log("Error details:", {
+            user: user?.primaryEmailAddress?.emailAddress,
+            workout: workout?.user?.email,
+            error: error.message
+        });
+    }
+ }
 
-    if (querySnapshot.docs?.length == 0) {
-        await setDoc(doc(db,'Chat',docId1), {
-        id: docId1,
-        users: [
-            {
-                email: user?.primaryEmailAddress?.emailAddress,
-                imageUrl: user?.imageUrl,
-                name: user?.fullName
-            },
-            {
-                email: workout?.email,
-                imageUrl: workout?.userImage,
-                name: workout?.username
-            }
-        ],
-        userIds: [user?.primaryEmailAddress?.emailAddress, workout?.email]
-        })
-        router.push({
-        pathname: '/chat',
-        params: {id: docId1}
-        })
-    }
-    }
+
 
     return (
         <View style={styles.container}>
