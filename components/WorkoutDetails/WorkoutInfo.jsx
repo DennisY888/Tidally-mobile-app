@@ -6,7 +6,6 @@ import {Colors} from '../../constants/Colors'
 import MarkFav from '../MarkFav'
 
 
-
 export default function WorkoutInfo({workout}) {
 
     return workout && (

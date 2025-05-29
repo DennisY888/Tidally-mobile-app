@@ -1,365 +1,559 @@
-import { View, Text, Image, TextInput, StyleSheet, ScrollView, TouchableOpacity, Pressable, ToastAndroid, ActivityIndicator } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import { useNavigation, useRouter } from 'expo-router'
-import { Colors } from './../../constants/Colors'
+// app/add-new-workout/index.jsx
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  Image, 
+  StyleSheet, 
+  ScrollView, 
+  Pressable, 
+  ToastAndroid, 
+  Animated,
+  Platform,
+  Alert
+} from 'react-native';
+import { useNavigation, useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
-import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
-import { db, storage } from '../../config/FirebaseConfig';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { collection, doc, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useUser } from '@clerk/clerk-expo';
 
+import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
+import { db, storage } from '../../config/FirebaseConfig';
+import { useTheme } from '../../context/ThemeContext';
+import FormField from '../../components/Forms/FormField';
+import ExerciseItem from '../../components/Workout/ExerciseItem';
+import ActionButton from '../../components/UI/ActionButton';
+import AnimatedHeader from '../../components/UI/AnimatedHeader';
+
+/**
+ * Toast notification helper for cross-platform support
+ * @param {string} message - Message to display
+ */
+const showToast = (message) => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(message, ToastAndroid.SHORT);
+  } else {
+    Alert.alert('', message, [{ text: 'OK' }], { cancelable: true });
+  }
+};
+
+/**
+ * Add New Workout Screen
+ * 
+ * Allows users to create a new workout by adding details and exercises
+ */
 export default function AddNewWorkout() {
-    const navigation = useNavigation();
-    const [formData, setFormData] = useState({});  // dictionary with string keys and value of any type
-    const [categoryList, setCategoryList] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState();
-    
-    const [image, setImage] = useState();  // selected image uri from user gallery
-    const [loader, setLoader] = useState(false);
-    const { user } = useUser();
-    const router = useRouter();
-
-    // NEW STATES FOR ADDING EXERCISES
-    const [exercises, setExercises] = useState([]); // Array to store all exercises
-    const [currentExercise, setCurrentExercise] = useState({
-        name: '',
-        reps: null,
-        time: null
+  const navigation = useNavigation();
+  const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const { user } = useUser();
+  
+  // Form state
+  const [formData, setFormData] = useState({});
+  const [categoryList, setCategoryList] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState();
+  const [image, setImage] = useState();
+  const [loader, setLoader] = useState(false);
+  
+  // Exercise state
+  const [exercises, setExercises] = useState([]);
+  const [currentExercise, setCurrentExercise] = useState({
+    name: '',
+    reps: null,
+    time: null,
+    sets: null
+  });
+  const [measurementType, setMeasurementType] = useState('reps');
+  
+  // Animation values
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslateY = useRef(new Animated.Value(50)).current;
+  
+  // Setup on component mount
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: false
     });
-    const [measurementType, setMeasurementType] = useState('reps'); // Track if user is inputting reps or time
-
-
-
-    useEffect(() => {
-        navigation.setOptions({
-            headerTitle: 'Add New Workout'
-        })
-        GetCategories();
-    }, [])   // executed once when component mounts
-
-
-
-    // fetch folders from Category collection in Firestore
-    const GetCategories = async() => {
-        setCategoryList([]);
-        const snapshot = await getDocs(collection(db,'Category'));
-        snapshot.forEach((doc) => {
-            setCategoryList(categoryList => [...categoryList, doc.data()])
-        })
-    }
-
-
-    // pick image from gallery
-    const imagePicker = async() => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
+    
+    getCategories();
+    
+    // Animate form appearance
+    Animated.parallel([
+      Animated.timing(formOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(formTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+  
+  /**
+   * Fetch categories from Firestore
+   */
+  const getCategories = async() => {
+    setCategoryList([]);
+    try {
+      const snapshot = await getDocs(collection(db, 'Category'));
+      const categories = [];
+      snapshot.forEach((doc) => {
+        categories.push(doc.data());
+      });
+      setCategoryList(categories);
       
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
+      if (categories.length > 0) {
+        setSelectedCategory(categories[0].name);
+        handleInputChange('category', categories[0].name);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      showToast("Failed to load categories");
     }
-
-
-    // fieldName should match the corresponding field name in Firestore
-    const handleInputChange = (fieldName, fieldValue) => {
-        setFormData(prev => ({
-            ...prev,
-            [fieldName]: fieldValue
-        }))
+  };
+  
+  /**
+   * Launch image picker to select workout image
+   */
+  const imagePicker = async() => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+      
+      if (!result.canceled) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Image picker error:", error);
+      showToast("Failed to select image");
     }
-
-
-    // NEW FUNCTION: Handle exercise input fields
-    const handleExerciseInput = (field, value) => {
-        setCurrentExercise(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-
-    // NEW FUNCTION: Add exercise to exercises array
-    const addExercise = () => {
-        if (!currentExercise.name || (!currentExercise.reps && !currentExercise.time)) {
-            ToastAndroid.show('Please enter exercise name and reps/time', ToastAndroid.SHORT);
-            return;
-        }
-        
-        setExercises([...exercises, currentExercise]);
-        setCurrentExercise({
-            name: '',
-            reps: null,
-            time: null
-        });
-    };
-
-
-    // NEW FUNCTION: Remove exercise from list
-    const removeExercise = (index) => {
-        setExercises(exercises.filter((_, i) => i !== index));
-    };
-
-    const onSubmit = () => {
-        if (!formData.title || !formData.category || !formData.est_time || !image) {
-            ToastAndroid.show('Please Enter All Details', ToastAndroid.SHORT)
-            return;
-        }
-        if (exercises.length === 0) {
-            ToastAndroid.show('Please Add At Least One Exercise', ToastAndroid.SHORT)
-            return;
-        }
-        UploadImage();
+  };
+  
+  /**
+   * Update form data state
+   * @param {string} fieldName - Form field name
+   * @param {string|number} fieldValue - Form field value
+   */
+  const handleInputChange = (fieldName, fieldValue) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: fieldValue
+    }));
+  };
+  
+  /**
+   * Update current exercise being edited
+   * @param {string} field - Exercise field name
+   * @param {string|number} value - Exercise field value
+   */
+  const handleExerciseInput = (field, value) => {
+    setCurrentExercise(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  /**
+   * Add current exercise to the list
+   */
+  const addExercise = () => {
+    if (!currentExercise.name || (!currentExercise.reps && !currentExercise.time) || !currentExercise.sets) {
+      showToast('Please enter exercise name, reps/time, and sets');
+      return;
     }
-
-
-    // uploads workout image (local url -> fetch) to Firebase Storage, then get a public imageUrl from it, 
-    // then save the url along with the rest of form data into Firestore
-    const UploadImage = async() => {
-        setLoader(true)
-        const resp = await fetch(image);
-        const blobImage = await resp.blob();
-        const storageRef = ref(storage,'/Tidally/'+Date.now()+'.jpg');
-        console.log(storageRef)
-        uploadBytes(storageRef,blobImage).then((snapshot) => {
-            console.log('File Uploaded')
-        }).then(resp => {
-            getDownloadURL(storageRef).then(async(downloadUrl) => {
-                console.log(downloadUrl);
-                SaveFormData(downloadUrl)   
-            })
-        })
+    
+    setExercises([...exercises, currentExercise]);
+    setCurrentExercise({
+      name: '',
+      reps: null,
+      time: null,
+      sets: null
+    });
+  };
+  
+  /**
+   * Remove exercise from the list
+   * @param {number} index - Index of exercise to remove
+   */
+  const removeExercise = (index) => {
+    setExercises(exercises.filter((_, i) => i !== index));
+  };
+  
+  /**
+   * Validate form and start upload process
+   */
+  const onSubmit = () => {
+    if (!formData.title || !formData.category || !formData.est_time || !image) {
+      showToast('Please Enter All Details');
+      return;
     }
-
-
-    const SaveFormData = async(imageUrl) => {
-        const docId = Date.now().toString(); 
-        await setDoc(doc(db,'Routines',docId), {   // creates a document with specified id
-            ...formData,
-            user: {
-                email: user?.primaryEmailAddress?.emailAddress,
-                imageUrl: user?.imageUrl,
-                name: user?.fullName
-            },
-            imageUrl: imageUrl,
-            exercises: exercises, // NEW: Adding exercises array to Firestore
-            id: docId
-        })
-        setLoader(false);
-        router.replace('/(tabs)/home')
+    if (exercises.length === 0) {
+      showToast('Please Add At Least One Exercise');
+      return;
     }
-
-
-    // NEW COMPONENT: Exercise Input UI
-    const ExerciseInputUI = () => (
-        <View>
-            <Text style={{
-                fontFamily: 'outfit-medium',
-                fontSize: 18,
-                marginTop: 20,
-                marginBottom: 10
-            }}>Add Exercises</Text>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Exercise Name *</Text>
-                <TextInput 
-                    style={styles.input}
-                    value={currentExercise.name}
-                    onChangeText={(value) => handleExerciseInput('name', value)}
-                    placeholder="Enter exercise name"
-                />
-            </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Measurement Type *</Text>
-                <Picker
-                    selectedValue={measurementType}
-                    style={styles.input}
-                    onValueChange={(value) => {
-                        setMeasurementType(value);
-                        setCurrentExercise(prev => ({
-                            ...prev,
-                            reps: null,
-                            time: null
-                        }));
-                    }}>
-                    <Picker.Item label="Reps" value="reps" />
-                    <Picker.Item label="Time (s)" value="time" />
-                </Picker>
-            </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>
-                    {measurementType === 'reps' ? 'Reps *' : 'Time (s) *'}
-                </Text>
-                <TextInput
-                    style={styles.input}
-                    keyboardType="number-pad"
-                    value={measurementType === 'reps' ? 
-                        currentExercise.reps?.toString() : 
-                        currentExercise.time?.toString()}
-                    onChangeText={(value) => {
-                        const numValue = parseInt(value);
-                        handleExerciseInput(
-                            measurementType === 'reps' ? 'reps' : 'time',
-                            isNaN(numValue) ? null : numValue
-                        );
-                    }}
-                    placeholder={measurementType === 'reps' ? 
-                        "Enter number of reps" : 
-                        "Enter time in seconds"}
-                />
-            </View>
-
-            <TouchableOpacity
-                style={[styles.button, { backgroundColor: Colors.light.secondary }]}
-                onPress={addExercise}>
-                <Text style={{fontFamily: 'outfit-medium', textAlign: 'center', color: '#fff'}}>
-                    Add Exercise
-                </Text>
-            </TouchableOpacity>
-
-            {exercises.length > 0 && (
-                <View style={styles.exerciseList}>
-                    <Text style={[styles.label, {marginBottom: 10}]}>Added Exercises:</Text>
-                    {exercises.map((exercise, index) => (
-                        <TouchableOpacity 
-                            key={index} 
-                            style={styles.exerciseItem}
-                            onLongPress={() => removeExercise(index)}>
-                            <Text style={styles.exerciseText}>
-                                {exercise.name} - {exercise.reps ? 
-                                    `${exercise.reps} reps` : 
-                                    `${exercise.time} seconds`}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                    <Text style={[styles.label, {fontSize: 12, marginTop: 5, color: Colors.light.gray}]}>
-                        Long press an exercise to remove it
-                    </Text>
+    uploadImage();
+  };
+  
+  /**
+   * Upload workout image to Firebase Storage
+   */
+  const uploadImage = async() => {
+    setLoader(true);
+    try {
+      const resp = await fetch(image);
+      const blobImage = await resp.blob();
+      const storageRef = ref(storage, '/Tidally/' + Date.now() + '.jpg');
+      
+      await uploadBytes(storageRef, blobImage);
+      const downloadUrl = await getDownloadURL(storageRef);
+      await saveFormData(downloadUrl);
+    } catch (error) {
+      console.error("Upload error:", error);
+      setLoader(false);
+      showToast("Failed to upload image");
+    }
+  };
+  
+  /**
+   * Save workout data to Firestore
+   * @param {string} imageUrl - URL of uploaded image
+   */
+  const saveFormData = async(imageUrl) => {
+    try {
+      const docId = Date.now().toString();
+      await setDoc(doc(db, 'Routines', docId), {
+        ...formData,
+        user: {
+          email: user?.primaryEmailAddress?.emailAddress,
+          imageUrl: user?.imageUrl,
+          name: user?.fullName
+        },
+        imageUrl: imageUrl,
+        exercises: exercises,
+        id: docId,
+        createdAt: serverTimestamp()
+      });
+      
+      setLoader(false);
+      showToast("Workout created successfully!");
+      router.replace('/(tabs)/home');
+    } catch (error) {
+      console.error("Save data error:", error);
+      setLoader(false);
+      showToast("Failed to save workout");
+    }
+  };
+  
+  return (
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      {/* Animated Header */}
+      <AnimatedHeader 
+        title="New Workout"
+        scrollY={scrollY}
+        onBackPress={() => router.back()}
+      />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
+        <Animated.View 
+          style={[
+            styles.formContainer,
+            { 
+              opacity: formOpacity,
+              transform: [{ translateY: formTranslateY }],
+              backgroundColor: colors.background
+            }
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Create New Workout</Text>
+          
+          {/* Image Picker */}
+          <View style={styles.imagePickerContainer}>
+            <Text style={[styles.label, { color: colors.text }]}>Cover Image *</Text>
+            <Pressable 
+              onPress={imagePicker}
+              style={[styles.imagePicker, { borderColor: colors.divider }]}
+            >
+              {!image ? (
+                <View style={[styles.placeholderImage, { backgroundColor: colors.lightGray }]}>
+                  <Ionicons name="image-outline" size={40} color={colors.textTertiary} />
+                  <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
+                    Tap to select image
+                  </Text>
                 </View>
-            )}
-        </View>
-    );
-
-
-    return (
-        <ScrollView style={{
-            padding: 20
-        }}>
-            <Text style={{
-                fontFamily: 'outfit-medium',
-                fontSize: 20
-            }}>Create New Workout</Text>
-
-            <Pressable onPress={imagePicker}>
-                <Text style={styles.label}>Select Image *</Text>
-                {!image? <Image source={require('./../../assets/images/placeholder.webp')}
-                    style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: 15, 
-                        borderWidth: 1,
-                        borderColor: Colors.light.lightGray
-                    }}/> :
-                    <Image source={{uri: image}}
-                        style={{
-                            width: 100,
-                            height: 100,
-                            borderRadius: 15, 
-                        }} />}
+              ) : (
+                <Image 
+                  source={{ uri: image }}
+                  style={styles.selectedImage}
+                />
+              )}
             </Pressable>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Workout Name *</Text>
-                <TextInput style={styles.input} 
-                    onChangeText={(value) => handleInputChange('title',value)} /> 
+          </View>
+          
+          {/* Workout Name */}
+          <FormField
+            label="Workout Name *"
+            placeholder="Enter workout name"
+            onChangeText={(value) => handleInputChange('title', value)}
+          />
+          
+          {/* Category Selector */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
+            <View style={[styles.pickerContainer, { 
+              backgroundColor: colors.backgroundSecondary,
+              borderColor: colors.divider 
+            }]}>
+              <Picker
+                selectedValue={selectedCategory}
+                style={[styles.picker, { color: colors.text }]}
+                dropdownIconColor={colors.primary}
+                onValueChange={(itemValue) => {
+                  setSelectedCategory(itemValue);
+                  handleInputChange('category', itemValue);
+                }}
+              >
+                {categoryList.map((category, index) => (
+                  <Picker.Item 
+                    key={index} 
+                    label={category.name} 
+                    value={category.name}
+                    color={Platform.OS === 'ios' ? colors.text : undefined}
+                  />
+                ))}
+              </Picker>
             </View>
-
+          </View>
+          
+          {/* Duration */}
+          <FormField
+            label="Est. Duration (min) *"
+            placeholder="Enter estimated duration in minutes"
+            keyboardType="number-pad"
+            onChangeText={(value) => handleInputChange('est_time', value)}
+          />
+          
+          {/* Exercises Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Add Exercises</Text>
+            
+            {/* Exercise Name */}
+            <FormField
+              label="Exercise Name *"
+              placeholder="Enter exercise name"
+              value={currentExercise.name}
+              onChangeText={(value) => handleExerciseInput('name', value)}
+            />
+            
+            {/* Measurement Type Selection */}
             <View style={styles.inputContainer}>
-                <Text style={styles.label}>Choose Folder *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Measurement Type *</Text>
+              <View style={[styles.pickerContainer, { 
+                backgroundColor: colors.backgroundSecondary,
+                borderColor: colors.divider 
+              }]}>
                 <Picker
-                    selectedValue={selectedCategory} 
-                    style={styles.input}
-                    onValueChange={(itemValue, itemIndex) => {
-                        setSelectedCategory(itemValue);
-                        handleInputChange('category',itemValue)}}>
-
-                    {categoryList.map((category,index) => (
-                        <Picker.Item key={index} label={category.name} value={category.name} />
-                    ))}
+                  selectedValue={measurementType}
+                  style={[styles.picker, { color: colors.text }]}
+                  dropdownIconColor={colors.primary}
+                  onValueChange={(value) => {
+                    setMeasurementType(value);
+                    setCurrentExercise(prev => ({
+                      ...prev,
+                      reps: null,
+                      time: null
+                    }));
+                  }}
+                >
+                  <Picker.Item 
+                    label="Repetitions (Reps)" 
+                    value="reps" 
+                    color={Platform.OS === 'ios' ? colors.text : undefined} 
+                  />
+                  <Picker.Item 
+                    label="Duration (Seconds)" 
+                    value="time" 
+                    color={Platform.OS === 'ios' ? colors.text : undefined} 
+                  />
                 </Picker>
+              </View>
             </View>
-
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Est. Duration (min) *</Text>
-                <TextInput style={styles.input} 
-                    keyboardType='number-pad'
-                    onChangeText={(value) => handleInputChange('est_time',value)} />
-            </View>
-
-            {/* NEW: Add Exercise Input UI */}
-            {ExerciseInputUI()}
-
-            <TouchableOpacity
-                style={styles.button}
-                disabled={loader} 
-                onPress={onSubmit}>
-                {loader ? 
-                    <ActivityIndicator size={'large'} /> :
-                    <Text style={{fontFamily: 'outfit-medium', textAlign: 'center', color: '#fff'}}>
-                        Submit
-                    </Text>
-                }
-            </TouchableOpacity>
-        </ScrollView>
-    )
+            
+            {/* Reps or Time Input */}
+            <FormField
+              label={measurementType === 'reps' ? 'Repetitions *' : 'Duration (seconds) *'}
+              placeholder={measurementType === 'reps' ? 
+                "Enter number of repetitions" : 
+                "Enter time in seconds"}
+              keyboardType="number-pad"
+              value={measurementType === 'reps' ? 
+                currentExercise.reps?.toString() : 
+                currentExercise.time?.toString()}
+              onChangeText={(value) => {
+                const numValue = parseInt(value);
+                handleExerciseInput(
+                  measurementType === 'reps' ? 'reps' : 'time',
+                  isNaN(numValue) ? null : numValue
+                );
+              }}
+            />
+            
+            {/* Sets Input */}
+            <FormField
+              label="Sets *"
+              placeholder="Enter number of sets"
+              keyboardType="number-pad"
+              value={currentExercise.sets?.toString()}
+              onChangeText={(value) => {
+                const numValue = parseInt(value);
+                handleExerciseInput('sets', isNaN(numValue) ? null : numValue);
+              }}
+            />
+            
+            {/* Add Exercise Button */}
+            <ActionButton
+              title="Add Exercise"
+              icon="add-circle"
+              color={colors.secondary}
+              onPress={addExercise}
+            />
+            
+            {/* Exercise List */}
+            {exercises.length > 0 && (
+              <View style={styles.exerciseList}>
+                <Text style={[styles.exerciseListTitle, { color: colors.text }]}>
+                  Exercise List
+                </Text>
+                <Text style={[styles.exerciseListHint, { color: colors.textTertiary }]}>
+                  Long press an exercise to remove it
+                </Text>
+                
+                <View style={styles.exerciseItems}>
+                  {exercises.map((exercise, index) => (
+                    <ExerciseItem
+                      key={index}
+                      exercise={exercise}
+                      index={index}
+                      onLongPress={() => removeExercise(index)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+          
+          {/* Submit Button */}
+          <ActionButton
+            title="Create Workout"
+            icon="checkmark-circle"
+            disabled={loader}
+            loading={loader}
+            onPress={onSubmit}
+          />
+        </Animated.View>
+      </ScrollView>
+    </View>
+  );
 }
 
-
-
 const styles = StyleSheet.create({
-    inputContainer: {
-        marginVertical: 5
-    },
-    input: {
-        padding: 10,
-        backgroundColor: Colors.light.background,
-        borderRadius: 7,
-        fontFamily: 'outfit'
-    },
-    label: {
-        marginVertical: 5,
-        fontFamily: 'outfit',
-        color: Colors.light.text
-    },
-    button: {
-        padding: 15,
-        backgroundColor: Colors.light.primary,
-        borderRadius: 7,
-        marginVertical: 10,
-        marginBottom: 50
-    },
-
-    // NEW STYLES
-    exerciseList: {
-        marginVertical: 15,
-        padding: 10,
-        backgroundColor: Colors.light.background,
-        borderRadius: 7,
-    },
-    exerciseItem: {
-        padding: 10,
-        backgroundColor: '#fff',
-        marginVertical: 5,
-        borderRadius: 5,
-        elevation: 2,
-    },
-    exerciseText: {
-        fontFamily: 'outfit',
-    }
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+    marginTop: 90, // Header offset
+  },
+  scrollContent: {
+    paddingTop: 30,
+    paddingBottom: 40,
+  },
+  formContainer: {
+    borderRadius: BorderRadius.lg,
+    margin: Spacing.md,
+    padding: Spacing.lg,
+    ...Shadows.medium,
+  },
+  sectionTitle: {
+    ...Typography.title2,
+    marginBottom: Spacing.lg,
+  },
+  imagePickerContainer: {
+    marginBottom: Spacing.lg,
+  },
+  label: {
+    ...Typography.subhead,
+    marginBottom: Spacing.xs,
+  },
+  imagePicker: {
+    width: '100%',
+    height: 200,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    ...Typography.callout,
+    marginTop: Spacing.sm,
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BorderRadius.md,
+  },
+  inputContainer: {
+    marginBottom: Spacing.lg,
+  },
+  pickerContainer: {
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  picker: {
+    ...Typography.body,
+  },
+  sectionContainer: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  exerciseList: {
+    marginTop: Spacing.xl,
+  },
+  exerciseListTitle: {
+    ...Typography.headline,
+    marginBottom: Spacing.xs,
+  },
+  exerciseListHint: {
+    ...Typography.caption1,
+    marginBottom: Spacing.md,
+  },
+  exerciseItems: {
+    marginTop: Spacing.sm,
+  },
 });

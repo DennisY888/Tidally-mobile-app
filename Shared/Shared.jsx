@@ -1,3 +1,4 @@
+// Shared/Shared.jsx
 // fetching the particular user's document with matching ID from Favorites collection in firestore
 
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore"

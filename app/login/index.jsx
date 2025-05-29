@@ -1,131 +1,201 @@
-import { View, Text, Image, Pressable} from 'react-native'
-import * as WebBrowser from 'expo-web-browser'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { StatusBar } from 'expo-status-bar';
-import { useOAuth } from '@clerk/clerk-expo'
-import * as Linking from 'expo-linking'
-import React, { useCallback } from 'react'
+// app/login/index.jsx
+import React, { useCallback, useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  Image, 
+  Animated, 
+  Dimensions,
+  StatusBar,
+  Platform
+} from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useOAuth } from '@clerk/clerk-expo';
+import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { Typography, Shadows } from '../../constants/Colors';
+import AuthButton from '../../components/Auth/AuthButton';
+import AppLogo from '../../components/Auth/AppLogo';
+import { useLoginAnimations } from '../../hooks/useLoginAnimations';
 
-
+/**
+ * Hook to warm up the WebBrowser for faster auth flows
+ */
 export const useWarmUpBrowser = () => {
   React.useEffect(() => {
-    // Warm up the android browser to improve UX
-    // https://docs.expo.dev/guides/authentication/#improving-user-experience
-    void WebBrowser.warmUpAsync()
+    void WebBrowser.warmUpAsync();
     return () => {
-      void WebBrowser.coolDownAsync()
-    }
-  }, [])
-}
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+};
 
-WebBrowser.maybeCompleteAuthSession()
+// Initialize WebBrowser for auth
+WebBrowser.maybeCompleteAuthSession();
 
-
-
-
+/**
+ * Login Screen
+ * 
+ * Handles user authentication via OAuth
+ */
 export default function LoginScreen() {
+  // Hooks
   useWarmUpBrowser();
-  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' })
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const [isLoading, setIsLoading] = useState(false);
+  const { width } = Dimensions.get('window');
+  
+  // Animation values
+  const {
+    fadeAnim,
+    slideAnim,
+    buttonScaleAnim,
+    imagePosition,
+    animateIn,
+    animateButtonPress
+  } = useLoginAnimations(width);
+  
+  // Set status bar style for login screen
+  useEffect(() => {
+    // Login screen always uses light-content
+    StatusBar.setBarStyle('light-content', true);
+    if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor('transparent');
+      StatusBar.setTranslucent(true);
+    }
+  }, []);
+  
+  // Start entrance animations
+  useEffect(() => {
+    animateIn();
+  }, [animateIn]);
 
-
-  const onPress = useCallback(async () => {
-
+  /**
+   * Handle login button press
+   */
+  const handleLogin = useCallback(async () => {
     try {
-      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow({
-        redirectUrl: Linking.createURL('/(tabs)/home', { scheme: 'myapp' }),
-      })
-
-
+      setIsLoading(true);
+      animateButtonPress();
+      
+      // Use simpler URL without extra parameters
+      const redirectUrl = Linking.createURL('/(tabs)/home');
+      console.log('OAuth redirect URL:', redirectUrl);
+      
+      const { createdSessionId, setActive } = await startOAuthFlow({
+        redirectUrl,
+      });
+  
       if (createdSessionId) {
         console.log('Activating session...');
         await setActive({ session: createdSessionId });
         console.log('Session activated:', createdSessionId);
-      } else {
-        // Use signIn or signUp for next steps such as MFA
       }
     } catch (err) {
-      console.error('OAuth error', err)
+      console.error('OAuth error:', err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [])
-
+  }, [animateButtonPress]);
 
   return (
-    <SafeAreaView className="flex-1">
-      <LinearGradient
-        colors={['#4C87B8', '#629CCB', '#7FB1DE']}
-        className="flex-1"
-      >
-        <View className="flex-1 justify-between px-6">
+    <LinearGradient
+      colors={['#4C87B8', '#629CCB', '#7FB1DE']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientContainer}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <Animated.View 
+          style={[
+            styles.contentContainer, 
+            { 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
           {/* Top Section */}
-          <View className="flex-1 justify-center items-center">
-            {/* Image Container with Shadow */}
-            <View className="w-full shadow-lg bg-white/10 rounded-3xl p-4 mb-8">
-              <Image 
+          <View style={styles.topSection}>
+            {/* Image Container with Animation */}
+            <Animated.View 
+              style={[
+                styles.imageContainer,
+                {
+                  transform: [{ translateX: imagePosition }],
+                }
+              ]}
+            >
+              <Image
                 source={require('./../../assets/images/login.png')}
-                resizeMode='contain' 
-                className="w-full h-[30vh]"
+                resizeMode='contain'
+                style={styles.loginImage}
               />
-            </View>
+            </Animated.View>
 
-            {/* App Name with Text Shadow */}
-            <View className="items-center">
-              <Text className="text-6xl font-bold text-white mb-3"
-                    style={{
-                      textShadowColor: 'rgba(0, 0, 0, 0.15)',
-                      textShadowOffset: { width: 0, height: 4 },
-                      textShadowRadius: 4,
-                    }}>
-                TIDALLY
-              </Text>
-              <Text className="text-white/80 text-lg text-center px-4">
-                Discover and Share Amazing Fitness Journeys
-              </Text>
-            </View>
+            {/* App Logo and Tagline */}
+            <AppLogo />
           </View>
 
           {/* Bottom Section */}
-          <View className="mb-8">
+          <View style={styles.bottomSection}>
             {/* Google Sign In Button */}
-            <Pressable 
-              onPress={onPress} 
-              className="bg-white p-4 rounded-xl shadow-lg active:opacity-90"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-                elevation: 5,
-              }}
-            >
-              <View className="flex-row justify-center items-center space-x-2">
-                <Image 
-                  source={require('./../../assets/images/google.png')} 
-                  className="w-10 h-10"
-                />
-                <Text className="font-outfit-medium text-lg text-[#4C87B8]">
-                  Continue with Google
-                </Text>
-              </View>
-            </Pressable>
+            <AuthButton
+              onPress={handleLogin}
+              isLoading={isLoading}
+              buttonScaleAnim={buttonScaleAnim}
+            />
 
             {/* Terms Text */}
-            <Text className="text-white/70 text-center mt-4 text-sm px-10">
+            <Text style={styles.termsText}>
               By continuing, you agree to our Terms of Service and Privacy Policy
             </Text>
           </View>
-        </View>
-
-        <StatusBar style='light'/>
-      </LinearGradient>
-    </SafeAreaView>
+        </Animated.View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
-
-
-
-
-
-
+const styles = {
+  gradientContainer: { 
+    flex: 1 
+  },
+  safeArea: { 
+    flex: 1 
+  },
+  contentContainer: { 
+    flex: 1, 
+    justifyContent: 'space-between', 
+    padding: 24,
+  },
+  topSection: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  imageContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 40,
+    ...Shadows.medium
+  },
+  loginImage: { 
+    width: '100%', 
+    height: 240 
+  },
+  bottomSection: { 
+    marginBottom: 20 
+  },
+  termsText: {
+    ...Typography.footnote,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 20,
+    marginHorizontal: 20,
+  }
+};

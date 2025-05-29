@@ -1,31 +1,42 @@
+// app/index.jsx 
 import { useUser } from "@clerk/clerk-expo";
-import { Redirect, useNavigation, useRootNavigationState, useRouter } from "expo-router";
-import { useEffect } from "react";
-import { View } from "react-native";
+import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
+import 'react-native-reanimated';
+import { useTheme } from "../context/ThemeContext";
 
 export default function Index() {
+  const [isReady, setIsReady] = useState(false);
   const { user, isLoaded } = useUser();
-  const rootNavigationState = useRootNavigationState();
-  const navigation = useNavigation();
+  const { colors, isThemeLoaded } = useTheme();
 
+  // Simple delay to ensure app is fully loaded
   useEffect(() => {
-    CheckNavLoaded();
-    navigation.setOptions({
-      headerShown: false
-    });
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
-  const CheckNavLoaded = () => {
-    if (!rootNavigationState?.key) return null;
-  };
-
-  // Wait for auth to load
-  if (!isLoaded || !rootNavigationState?.key) {
-    return null;
+  // Show loading indicator while states initialize
+  if (!isLoaded || !isThemeLoaded || !isReady) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: colors?.background || '#ffffff' 
+      }}>
+        <ActivityIndicator size="large" color={colors?.primary || '#0066ff'} />
+      </View>
+    );
   }
 
+  // Use Redirect component for navigation once fully loaded
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {user ? (
         <Redirect href={'/(tabs)/home'} />
       ) : (
