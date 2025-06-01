@@ -1,5 +1,5 @@
 // components/Home/Folder.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,8 @@ import {
   StyleSheet, 
   TouchableOpacity,
   Animated,
-  Dimensions
+  Dimensions,
+  ScrollView
 } from 'react-native';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from './../../config/FirebaseConfig';
@@ -51,60 +52,65 @@ export default function Folder({ category }) {
     setSelectedCategory(item.name);
     category(item.name);
   };
-  
-  const renderCategoryItem = ({ item, index }) => {
-    const isSelected = selectedCategory === item.name;
-    const inputRange = [
-      (index - 1) * (width / 4),
-      index * (width / 4),
-      (index + 1) * (width / 4),
-    ];
+
+
+  // Chunk data into groups of 4 for 2×2 grid
+  const chunkedCategories = useMemo(() => {
+    const chunks = [];
+    for (let i = 0; i < categoryList.length; i += 6) {  
+      chunks.push(categoryList.slice(i, i + 6));
+    }
+    return chunks;
+  }, [categoryList]);
+
+
+  const renderPremiumCategoryItem = (item, globalIndex) => {
+    if (!item) {
+      // Empty placeholder for incomplete rows
+      return <View style={styles.categoryCard} key={`empty-${globalIndex}`} />;
+    }
     
-    const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.95, 1.05, 0.95],
-      extrapolate: 'clamp',
-    });
+    const isSelected = selectedCategory === item.name;
     
     return (
       <TouchableOpacity
+        key={item.name || `category-${globalIndex}`}
+        style={styles.categoryCard}
         onPress={() => handleCategorySelect(item)}
-        style={styles.itemWrapper}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
       >
         <MotiView
           animate={{
-            scale: isSelected ? 1.05 : 0.95,
-            opacity: isSelected ? 1 : 0.8,
+            scale: isSelected ? 1.02 : 1,
+            opacity: isSelected ? 1 : 0.95,
           }}
           transition={{
-            type: 'timing',
-            duration: 300,
+            type: 'spring',
+            damping: 20,
+            stiffness: 300,
           }}
+          style={{ flex: 1 }}
         >
           <LinearGradient
             colors={
               isSelected
-                ? [Colors.light.primary, Colors.light.secondary]
+                ? [Colors.light.primary, Colors.light.secondary, Colors.light.accent]
                 : [Colors.light.backgroundSecondary, Colors.light.background]
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[
-              styles.container,
-              isSelected && styles.selectedContainer
-            ]}
+            style={styles.cardGradient}
           >
-            <View style={styles.iconContainer}>
+            <View style={styles.iconContainerLarge}>
               {item?.imageUrl ? (
                 <Image
                   source={{ uri: item?.imageUrl }}
-                  style={styles.categoryImage}
+                  style={styles.categoryImageLarge}
                 />
               ) : (
                 <Ionicons 
                   name="folder" 
-                  size={30} 
+                  size={40}
                   color={isSelected ? '#fff' : Colors.light.textSecondary} 
                 />
               )}
@@ -112,10 +118,10 @@ export default function Folder({ category }) {
             
             <Text 
               style={[
-                styles.categoryText,
-                isSelected && styles.selectedCategoryText
+                styles.categoryTextLarge,
+                isSelected && styles.selectedCategoryTextLarge
               ]}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {item?.name}
             </Text>
@@ -124,6 +130,7 @@ export default function Folder({ category }) {
       </TouchableOpacity>
     );
   };
+
   
   // Placeholder items for loading state
   const renderPlaceholder = () => {
@@ -152,28 +159,30 @@ export default function Folder({ category }) {
           {renderPlaceholder()}
         </View>
       ) : (
-        <Animated.FlatList
-          data={categoryList}
-          horizontal
+        <ScrollView 
+          horizontal 
+          pagingEnabled
           showsHorizontalScrollIndicator={false}
-          renderItem={renderCategoryItem}
-          keyExtractor={(item, index) => `category-${index}`}
-          contentContainerStyle={styles.listContainer}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false }
-          )}
-          scrollEventThrottle={16}
           decelerationRate="fast"
-          snapToInterval={width / 4}
-          snapToAlignment="center"
-          ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="folder-open" size={32} color={Colors.light.textTertiary} />
-              <Text style={styles.emptyText}>No categories found</Text>
+          contentContainerStyle={styles.scrollContainer}
+        >
+          {chunkedCategories.map((chunk, pageIndex) => (
+            <View key={`page-${pageIndex}`} style={styles.pageContainer}>
+              {/* First row */}
+              <View style={styles.gridRow}>
+                {chunk.slice(0, 3).map((item, index) => 
+                  renderPremiumCategoryItem(item, pageIndex * 6 + index)
+                )}
+              </View>
+              {/* Second row */}
+              <View style={styles.gridRow}>
+                {chunk.slice(3, 6).map((item, index) => 
+                  renderPremiumCategoryItem(item, pageIndex * 6 + index + 3)
+                )}
+              </View>
             </View>
-          )}
-        />
+          ))}
+        </ScrollView>
       )}
     </View>
   );
@@ -203,47 +212,6 @@ const styles = StyleSheet.create({
     ...Typography.subhead,
     color: Colors.light.primary,
     marginLeft: 4,
-  },
-  listContainer: {
-    paddingHorizontal: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
-  itemWrapper: {
-    paddingHorizontal: 8,
-    width: Dimensions.get('window').width / 4,
-  },
-  container: {
-    alignItems: 'center',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    ...Shadows.small,
-  },
-  selectedContainer: {
-    ...Shadows.medium,
-  },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  categoryImage: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  categoryText: {
-    ...Typography.footnote,
-    textAlign: 'center',
-    color: Colors.light.text,
-    marginTop: 4,
-  },
-  selectedCategoryText: {
-    color: '#fff',
-    fontFamily: 'outfit-medium',
   },
   placeholderWrapper: {
     flexDirection: 'row',
@@ -276,5 +244,60 @@ const styles = StyleSheet.create({
     ...Typography.callout,
     color: Colors.light.textTertiary,
     marginTop: Spacing.sm,
+  },
+  scrollContainer: {
+    paddingVertical: Spacing.lg,
+  },
+  pageContainer: {
+    width: Dimensions.get('window').width,
+    paddingHorizontal: Spacing.lg,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  categoryCard: {
+    width: (Dimensions.get('window').width - (Spacing.lg * 2) - (Spacing.md * 2)) / 3,
+    aspectRatio: 1.0,  
+    borderRadius: BorderRadius.lg,  
+    overflow: 'hidden',
+    ...Shadows.medium,  
+  },
+  cardGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+  },
+  iconContainerLarge: {
+    width: 60,   
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    shadowColor: 'rgba(0, 0, 0, 0.15)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  categoryImageLarge: {
+    width: 36,   
+    height: 36,
+    borderRadius: 18,
+  },
+  categoryTextLarge: {
+    ...Typography.callout,  
+    textAlign: 'center',
+    color: Colors.light.text,
+    fontFamily: 'outfit-medium',
+  },
+  selectedCategoryTextLarge: {
+    color: '#fff',
+    fontFamily: 'outfit-bold',
   },
 });

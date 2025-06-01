@@ -33,7 +33,6 @@ const loadSessions = useCallback(async () => {
   try {
     setRefreshing(true);
     const sessions = await WorkoutSessionService.getSavedSessions();
-    console.log("Retrieved sessions:", JSON.stringify(sessions, null, 2));
     
     // Process the sessions to ensure all required fields exist
     const processedSessions = sessions.map(session => ({
@@ -52,7 +51,6 @@ const loadSessions = useCallback(async () => {
     );
     
     setSavedSessions(sortedSessions);
-    console.log(`Loaded ${sortedSessions.length} workout sessions`);
   } catch (error) {
     console.error("Error loading saved sessions:", error);
     // Handle the error gracefully in the UI if needed

@@ -83,7 +83,6 @@ export default function WorkoutPlay() {
     // Only save if workout is not complete
     if (!workoutComplete) {
       await saveSession();
-      console.log("Workout session saved");
     }
     router.back();
   };

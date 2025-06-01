@@ -187,9 +187,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
     // Use the ref to access the latest exercises
     const currentExercises = [...sessionExercisesRef.current];
     
-    console.log("Saving session. Current exercises count:", currentExercises.length);
-    console.log("Sample exercise (first one):", currentExercises.length > 0 ? JSON.stringify(currentExercises[0]) : "None");
-    
     const sessionData = {
       workoutId: workout.id,
       workoutTitle: workout.title,

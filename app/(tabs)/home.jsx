@@ -70,8 +70,6 @@ const WorkoutItem = React.memo(({ workout, index }) => {
 export default function Home() {
   // State management
   const [workouts, setWorkouts] = useState([]);
-  const [recentWorkouts, setRecentWorkouts] = useState([]);
-  const [popularWorkouts, setPopularWorkouts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -192,31 +190,19 @@ export default function Home() {
    * Loads all initial workout data from Firestore
    */
   const loadInitialData = async () => {
-  // Only show loading indicator for initial loads, not background refreshes
-  if (!isBackgroundRefreshing) {
-    setLoading(true);
-  }
-  
-  try {
-    await Promise.all([
-      loadRecentWorkouts(),
-      loadPopularWorkouts()
-    ]);
-  } catch (error) {
-    console.error("Error loading initial data:", error);
-  } finally {
+    // Only show loading indicator for initial loads, not background refreshes
+    if (!isBackgroundRefreshing) {
+      setLoading(true);
+    }
     setLoading(false);
     setIsBackgroundRefreshing(false);
-  }
-};
+  };
 
 
   const loadCachedData = useCallback(async () => {
     try {
       // 1. Get all cache keys at once
       const keys = [
-        'cached_recent_workouts', 
-        'cached_popular_workouts', 
         selectedCategory ? `cached_category_${selectedCategory}` : null
       ].filter(Boolean); // Remove null values
       
@@ -236,17 +222,7 @@ export default function Home() {
             continue; // Skip expired cache
           }
           
-          // 5. Set state based on the cache type
-          if (key === 'cached_recent_workouts') {
-            setRecentWorkouts(parsed.data || []);
-          } else if (key === 'cached_popular_workouts') {
-            setPopularWorkouts(parsed.data || []);
-            
-            // Initialize category if needed (preserving existing logic)
-            if (!selectedCategory && parsed.data?.length > 0) {
-              setSelectedCategory(parsed.data[0].category);
-            }
-          } else if (key.startsWith('cached_category_')) {
+          if (key.startsWith('cached_category_')) {
             setWorkouts(parsed.data || []);
           }
         } catch (e) {
@@ -270,55 +246,11 @@ export default function Home() {
       console.error(`Error caching ${key}:`, error);
     }
   };
-  
 
-  /**
-   * Loads user's recent workouts from Firestore
-   */
-  const loadRecentWorkouts = async () => {
-    if (!user?.primaryEmailAddress?.emailAddress) return;
-    
-    try {
-      const { workouts: recentData } = await WorkoutService.getWorkouts({
-        userEmail: user.primaryEmailAddress.emailAddress,
-        orderByField: 'id',
-        limit: 10
-      });
-      
-      setRecentWorkouts(prevWorkouts => mergeWorkouts(recentData, prevWorkouts));
-      
-      // Cache the data
-      await saveToCache('cached_recent_workouts', recentData);
-    } catch (error) {
-      console.error("Error loading recent workouts:", error);
-    }
-  };
-  
 
-  /**
-   * Loads popular workouts from Firestore
-   * Note: This is a simplified implementation. In a real app, 
-   * you'd track favorites count in the workout document
-   */
-  const loadPopularWorkouts = async () => {
-    try {
-      const { workouts: popularData } = await WorkoutService.getWorkouts({
-        orderByField: 'id',
-        limit: 10
-      });
-      
-      setPopularWorkouts(prevWorkouts => mergeWorkouts(popularData, prevWorkouts));
-      
-      // Cache the data
-      await saveToCache('cached_popular_workouts', popularData);
-      
-      return popularData;
-    } catch (error) {
-      console.error("Error loading popular workouts:", error);
-      return [];
-    }
+  const navigateToAddWorkout = () => {
+    router.push('/add-new-workout');
   };
-  
   
 
   /**
@@ -348,18 +280,7 @@ export default function Home() {
   // Add this function after your other loading functions
   const refreshDataSilently = async () => {
     try {
-      // Create individual promises that won't reject
-      const safeLoadRecentWorkouts = loadRecentWorkouts().catch(err => {
-        console.error("Silent refresh error (recent workouts):", err);
-        return null;
-      });
-      
-      const safeLoadPopularWorkouts = loadPopularWorkouts().catch(err => {
-        console.error("Silent refresh error (popular workouts):", err);
-        return null;
-      });
-      
-      const refreshPromises = [safeLoadRecentWorkouts, safeLoadPopularWorkouts];
+      const refreshPromises = [];
       
       // Also refresh category data if we have a category selected
       if (selectedCategory) {
@@ -388,34 +309,6 @@ export default function Home() {
     await loadInitialData();
     setRefreshing(false);
   };
-  
-  /**
-   * Navigate to add new workout screen
-   */
-  const navigateToAddWorkout = () => {
-    router.push('/add-new-workout');
-  };
-
-  
-  // Replace the existing renderWorkoutList function
-  const renderWorkoutList = useCallback((data, emptyMessage) => {
-    if (data.length === 0 && !loading) {
-      return <EmptyState message={emptyMessage} icon="fitness-outline" />;
-    }
-    
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.workoutList}
-      >
-        {data.map((item, index) => {
-          const itemKey = item.id || `workout-${index}`;
-          return <WorkoutItem key={itemKey} workout={item} index={index} />;
-        })}
-      </ScrollView>
-    );
-  }, [loading]); // Add loading as dependency
 
   
   // Calculate header elevation based on scroll position
@@ -426,9 +319,37 @@ export default function Home() {
   });
   
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Workout App</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      <View style={[styles.header, { 
+        backgroundColor: colors.background,
+        borderBottomColor: colors.divider 
+      }]}>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>Workout App</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={navigateToAddWorkout}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add-circle-outline" size={28} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => router.push('/profile')}
+              activeOpacity={0.7}
+            >
+              {user?.imageUrl ? (
+                <Image 
+                  source={{ uri: user.imageUrl }} 
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Ionicons name="person-circle-outline" size={28} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
         
         {/* Search input */}
         <TextInput
@@ -443,8 +364,8 @@ export default function Home() {
       </View>
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
+        <View style={[styles.loadingContainer, { backgroundColor: colors.backgroundSecondary }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView 
@@ -537,76 +458,6 @@ export default function Home() {
                 selectedCategory={selectedCategory}
               />
               
-              {/* Recent Workouts Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Recent Workouts</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {recentWorkouts.map((workout) => (
-                    <TouchableOpacity
-                      key={workout.id}
-                      style={styles.horizontalCard}
-                      onPress={() => router.push({
-                        pathname: '/workout-details',
-                        params: {
-                          id: workout.id,  // Use 'id' parameter name to match what workout-details expects
-                          title: workout.title,
-                          imageUrl: workout.imageUrl,
-                          category: workout.category,
-                          description: workout.description || "",
-                          est_time: workout.est_time || "0",
-                          exercises: JSON.stringify(workout.exercises || []),  // JSON stringify the exercises
-                          user: JSON.stringify(workout.user || {})  // JSON stringify the user
-                        }
-                      })}
-                    >
-                      <Image
-                        source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
-                        style={styles.horizontalCardImage}
-                        resizeMode="cover"
-                      />
-                      <Text style={styles.horizontalCardTitle} numberOfLines={1}>
-                        {workout.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-              
-              {/* Popular Workouts Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Popular Workouts</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {popularWorkouts.map((workout) => (
-                    <TouchableOpacity
-                      key={workout.id}
-                      style={styles.horizontalCard}
-                      onPress={() => router.push({
-                        pathname: '/workout-details',
-                        params: {
-                          id: workout.id,  // Use 'id' parameter name to match what workout-details expects
-                          title: workout.title,
-                          imageUrl: workout.imageUrl,
-                          category: workout.category,
-                          description: workout.description || "",
-                          est_time: workout.est_time || "0",
-                          exercises: JSON.stringify(workout.exercises || []),  // JSON stringify the exercises
-                          user: JSON.stringify(workout.user || {})  // JSON stringify the user
-                        }
-                      })}
-                    >
-                      <Image
-                        source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
-                        style={styles.horizontalCardImage}
-                        resizeMode="cover"
-                      />
-                      <Text style={styles.horizontalCardTitle} numberOfLines={1}>
-                        {workout.title}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-              
               {/* Selected Category Workouts */}
               {selectedCategory && workouts.length > 0 && (
                 <View style={styles.section}>
@@ -658,18 +509,29 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     padding: 15,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  addButton: {
+    width: 44,          // Apple minimum touch target
+    height: 44,         // Apple minimum touch target
+    borderRadius: 22,   // Perfect circle
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(46, 92, 138, 0.1)',  // Subtle background using primary color
   },
   contentContainer: {
     flex: 1,
@@ -779,5 +641,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(46, 92, 138, 0.1)',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
 });

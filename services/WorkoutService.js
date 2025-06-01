@@ -2,6 +2,7 @@
 import { collection, getDocs, doc, updateDoc, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
 import { db } from '../config/FirebaseConfig';
 
+
 export const WorkoutService = {
   /**
    * Fetch workouts with flexible querying options and pagination support
@@ -138,10 +139,9 @@ searchWorkouts: async (searchTerm) => {
     if (!searchTerm || searchTerm.trim() === '') {
       return { workouts: [] };
     }
-    
-    const snapshot = await getDocs(collection(db, 'Routines'));
-    
     const searchTermLower = searchTerm.toLowerCase().trim();
+
+    const snapshot = await getDocs(collection(db, 'Routines'));
     
     const matchingWorkouts = snapshot.docs
       .map(doc => {

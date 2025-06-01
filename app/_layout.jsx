@@ -110,7 +110,6 @@ function ThemedApp({ children }) {
   
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBarController />
       {children}
     </View>
   );
@@ -135,6 +134,7 @@ export default function RootLayout() {
     >
       <NetworkProvider>
         <ThemeProvider>
+          <StatusBar hidden={true} />
             <ThemedApp>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />

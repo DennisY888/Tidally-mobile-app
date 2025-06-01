@@ -11,7 +11,7 @@ import {
   Alert,
   Platform
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
@@ -37,6 +37,8 @@ export default function Profile() {
   const { signOut } = useAuth();
   const router = useRouter();
   const { colors, isDark, setTheme, theme } = useTheme();
+
+  const navigation = useNavigation()
   
   // State
   const [stats, setStats] = useState({
@@ -48,6 +50,10 @@ export default function Profile() {
   
   // Load user stats on component mount
   useEffect(() => {
+    navigation.setOptions({
+        headerShown: false
+      });
+
     if (user) {
       fetchUserStats();
     }

@@ -38,15 +38,7 @@ export default function TabLayout() {
         listeners={{
           tabPress: () => {
             refresh();
-            console.log("LOL");
           }
-        }}
-      />
-      <Tabs.Screen name='inbox'
-        options={{
-          title:'Inbox',
-          headerShown:false,
-          tabBarIcon:({color}) => <Ionicons name="chatbubble" size={24} color={color} />
         }}
       />
       <Tabs.Screen name='profile'

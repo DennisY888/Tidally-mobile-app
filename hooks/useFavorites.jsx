@@ -40,7 +40,6 @@ export const useFavorites = (user) => {
 
 
   const refresh = useCallback(async () => {
-    console.log("========== DIAGNOSTIC: useFavorites.refresh ==========");
     console.log("User exists:", !!user);
     
     if (!user) {
@@ -50,22 +49,18 @@ export const useFavorites = (user) => {
     
     setLoader(true);
     try {
-      console.log("Calling Shared.GetFavList");
       const result = await Shared.GetFavList(user);
-      console.log("GetFavList result:", result);
       
       console.log("Setting favIds from result.favorites:", result?.favorites);
       setFavIds(result?.favorites);
       
       setLoader(false);
-      console.log("Calling getFavWorkouts with favorites");
       await getFavWorkouts(result?.favorites);
     } catch (error) {
       console.error("Error in refresh:", error);
       setLoader(false);
     }
     
-    console.log("========== END DIAGNOSTIC: useFavorites.refresh ==========");
   }, [user]);
 
 
