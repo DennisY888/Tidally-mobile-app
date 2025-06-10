@@ -1,4 +1,4 @@
-// app/(tabs)/profile.jsx
+// app/profile/index.jsx
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -217,13 +217,6 @@ export default function Profile() {
           type="switch"
           value={isDark}
           onPress={handleThemeChange}
-        />
-        <SettingsOption
-          icon="sync-outline"
-          title="Use System Settings"
-          type="switch"
-          value={theme === 'system'}
-          onPress={handleUseSystemTheme}
         />
       </SettingsSection>
       

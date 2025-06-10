@@ -136,40 +136,31 @@ getAllDocuments: async () => {
 
 searchWorkouts: async (searchTerm) => {
   try {
-    if (!searchTerm || searchTerm.trim() === '') {
+    // We must search with a lowercase term because our index is lowercase.
+    const lowercasedTerm = searchTerm.toLowerCase().trim();
+
+    if (lowercasedTerm === '') {
       return { workouts: [] };
     }
-    const searchTermLower = searchTerm.toLowerCase().trim();
 
-    const snapshot = await getDocs(collection(db, 'Routines'));
-    
-    const matchingWorkouts = snapshot.docs
-      .map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          _id: doc.id,
-          _ref: doc.ref
-        };
-      })
-      .filter(workout => {
-        // Check workout title
-        const titleMatch = (workout.title || '')
-          .toLowerCase()
-          .includes(searchTermLower);
-        
-        // Check exercise names
-        const exerciseMatch = workout.exercises?.some(exercise => 
-          (exercise.name || '').toLowerCase().includes(searchTermLower)
-        );
-        
-        // Return true if either title or any exercise name matches
-        return titleMatch || exerciseMatch;
-      });
-    
-    return { workouts: matchingWorkouts };
+    // This query is highly efficient. It asks Firestore to find all documents
+    // where the `searchIndex` array contains the user's search term.
+    const q = query(
+      collection(db, 'Routines'),
+      where('searchIndex', 'array-contains', lowercasedTerm),
+      limit(20) // Always limit your search results to prevent huge returns.
+    );
+
+    const snapshot = await getDocs(q);
+
+    const workouts = snapshot.docs.map(doc => doc.data());
+
+    return { workouts: workouts };
+
   } catch (error) {
-    console.error("Error searching workouts:", error);
+    // This will catch errors, e.g., if the required index is not built yet.
+    console.error("Error searching workouts with Firestore index:", error);
+    // It's important to return an empty array so the app doesn't crash.
     return { workouts: [] };
   }
 },

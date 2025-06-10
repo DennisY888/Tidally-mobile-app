@@ -56,12 +56,12 @@ const ExercisesList = ({
   }
 
   return (
-    <View style={{ minHeight: exercises.length * 90 + 120 }}>
+    <View>
       {/* Drag Help Instructions */}
       <View style={styles.dragHelpContainer}>
         <Text style={[styles.dragHelpText, { color: colors.textTertiary }]}>
           <Ionicons name="information-circle-outline" size={14} color={colors.textTertiary} />
-          <Text>{" "}Press and hold an exercise to reorder</Text>
+          <Text>{" "}Hold and drag an exercise to reorder</Text>
         </Text>
       </View>
       

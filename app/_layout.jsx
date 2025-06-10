@@ -12,6 +12,8 @@ import 'react-native-reanimated';
 import { Platform } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 import { Colors } from '../constants/Colors';
+import { FavoritesProvider } from '../hooks/useRealtimeFavorites';
+
 
 // Token cache implementation for Clerk
 const tokenCache = {
@@ -39,7 +41,6 @@ const tokenCache = {
   },
 };
 
-// StatusBar controller that manages status bar appearance based on theme and current route
 // StatusBar controller that manages status bar appearance based on theme and current route
 function StatusBarController() {
   const { isDark, colors } = useTheme();
@@ -135,13 +136,15 @@ export default function RootLayout() {
       <NetworkProvider>
         <ThemeProvider>
           <StatusBar hidden={true} />
-            <ThemedApp>
+          <FavoritesProvider>
+          <ThemedApp>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="login/index" options={{ headerShown: false }} />
               </Stack>
             </ThemedApp>
+          </FavoritesProvider>
         </ThemeProvider>
       </NetworkProvider>
     </ClerkProvider>

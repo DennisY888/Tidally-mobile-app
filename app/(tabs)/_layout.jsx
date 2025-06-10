@@ -35,11 +35,6 @@ export default function TabLayout() {
           headerShown: false,
           tabBarIcon: ({ color }) => <Ionicons name="heart" size={24} color={color} />
         }}
-        listeners={{
-          tabPress: () => {
-            refresh();
-          }
-        }}
       />
       <Tabs.Screen name='profile'
         options={{

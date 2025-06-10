@@ -1,4 +1,5 @@
 
+
 {
   "name": "tidally",
   "main": "expo-router/entry",
@@ -26,6 +27,7 @@
     "expo": "^53.0.0",
     "expo-auth-session": "~6.1.5",
     "expo-av": "~15.1.4",
+    "expo-blur": "~13.0.3",
     "expo-constants": "~17.1.5",
     "expo-crypto": "~14.1.4",
     "expo-font": "~13.3.0",
@@ -40,6 +42,7 @@
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
     "firebase": "^11.0.2",
+    "firebase-admin": "^13.4.0",
     "lodash": "^4.17.21",
     "metro": "^0.82.0",
     "moment": "^2.30.1",

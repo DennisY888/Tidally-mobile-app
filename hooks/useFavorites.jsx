@@ -1,72 +1,59 @@
-// hooks/useFavorites.jsx
-import { useState, useEffect, useCallback } from 'react';
+// hooks/useFavorites.js
+
+import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../config/FirebaseConfig';
-import Shared from '../Shared/Shared';
+import { useRealtimeFavorites } from './useRealtimeFavorites'; // <-- Use the new hook
 
-
-export const useFavorites = (user) => {
-  const [favIds, setFavIds] = useState([]);
+export const useFavorites = () => {
+  // 1. Get the real-time list of favorite IDs
+  const { favIds, isLoaded: favIdsLoaded } = useRealtimeFavorites();
   const [favWorkouts, setFavWorkouts] = useState([]);
   const [loader, setLoader] = useState(false);
 
-  
-  const getFavWorkouts = async (favId) => {
-    setLoader(true);
-    setFavWorkouts([]);
-    
-    if (!favId?.length) {
-      setLoader(false);
-      return;
-    }
-    
-    try {
-      // Fix: Use favId instead of favId_
-      const q = query(collection(db, 'Routines'), where('id', 'in', favId));
-      const querySnapshot = await getDocs(q);
-      
-      const newWorkouts = [];
-      querySnapshot.forEach((doc) => {
-        newWorkouts.push(doc.data());
-      });
-      
-      setFavWorkouts(newWorkouts);
-    } catch (error) {
-      console.error("Error fetching favorite workouts:", error);
-    } finally {
-      setLoader(false);
-    }
-  };
-
-
-  const refresh = useCallback(async () => {
-    console.log("User exists:", !!user);
-    
-    if (!user) {
-      console.log("No user, returning early");
-      return;
-    }
-    
-    setLoader(true);
-    try {
-      const result = await Shared.GetFavList(user);
-      
-      console.log("Setting favIds from result.favorites:", result?.favorites);
-      setFavIds(result?.favorites);
-      
-      setLoader(false);
-      await getFavWorkouts(result?.favorites);
-    } catch (error) {
-      console.error("Error in refresh:", error);
-      setLoader(false);
-    }
-    
-  }, [user]);
-
-
+  // 2. This effect runs whenever the list of favorite IDs changes
   useEffect(() => {
-    user && refresh();
-  }, [user]);
+    // A function to fetch the full workout documents based on the IDs
+    const getFavWorkouts = async () => {
+      if (!favIdsLoaded) return; // Wait until the IDs are loaded
 
-  return { favWorkouts, loader, refresh };
+      setLoader(true);
+      setFavWorkouts([]);
+
+      // If there are no favorite IDs, we're done.
+      if (!favIds || favIds.length === 0) {
+        setLoader(false);
+        return;
+      }
+
+      try {
+        // Firestore 'in' queries are limited to 30 items per query. We must batch them.
+        const workoutPromises = [];
+        for (let i = 0; i < favIds.length; i += 30) {
+          const batchIds = favIds.slice(i, i + 30);
+          const q = query(collection(db, 'Routines'), where('id', 'in', batchIds));
+          workoutPromises.push(getDocs(q));
+        }
+
+        const querySnapshots = await Promise.all(workoutPromises);
+        const newWorkouts = [];
+        querySnapshots.forEach(snapshot => {
+          snapshot.forEach(doc => newWorkouts.push(doc.data()));
+        });
+        
+        setFavWorkouts(newWorkouts);
+
+      } catch (error) {
+        console.error("Error fetching favorite workouts:", error);
+      } finally {
+        setLoader(false);
+      }
+    };
+
+    getFavWorkouts();
+  }, [favIds, favIdsLoaded]); // 3. The dependency array ensures this re-runs on any change
+
+  // We no longer need the manual 'refresh' function as data is real-time.
+  // The FlatList onRefresh can simply be an empty function or removed.
+  return { favWorkouts, loader };
 };

@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function Favorite() {
   const { user } = useUser();
-  const { favWorkouts, loader, refresh } = useFavorites(user);
+  const { favWorkouts, loader } = useFavorites();
   const { colors } = useTheme();
   
   // Render empty state when no favorites
@@ -31,7 +31,6 @@ export default function Favorite() {
       <FlatList
         data={favWorkouts}
         numColumns={2}
-        onRefresh={refresh}
         refreshing={loader}
         contentContainerStyle={favWorkouts.length === 0 && styles.centerContent}
         ListEmptyComponent={renderEmptyState}

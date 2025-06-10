@@ -1,11 +1,13 @@
 // components/Auth/AuthButton.jsx
+
 import React from 'react';
-import { View, Text, Pressable, Image, Animated, StyleSheet } from 'react-native';
-import { Typography } from '../../constants/Colors';
+import { Text, Image, Animated, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { BlurView } from 'expo-blur'; // Import BlurView for the effect
+import { Typography, Shadows } from '../../constants/Colors'; // Import Shadows for consistency
 
 /**
- * Authentication button with animation support
- * 
+ * Authentication button with a modern "glassmorphism" style and animation support.
+ *
  * @param {Object} props - Component props
  * @param {Function} props.onPress - Button press handler
  * @param {boolean} props.isLoading - Whether the button is in loading state
@@ -15,39 +17,39 @@ import { Typography } from '../../constants/Colors';
 const AuthButton = ({ onPress, isLoading, buttonScaleAnim }) => {
   return (
     <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
-      <Pressable
-        onPress={onPress}
-        disabled={isLoading}
-        style={({ pressed }) => [
-          styles.button,
-          { opacity: pressed ? 0.9 : 1 }
-        ]}
-      >
-        <Image
-          source={require('./../../assets/images/google.png')}
-          style={styles.googleIcon}
-        />
-        <Text style={styles.buttonText}>
-          {isLoading ? 'Signing in...' : 'Continue with Google'}
-        </Text>
-      </Pressable>
+      <TouchableOpacity onPress={onPress} disabled={isLoading} activeOpacity={0.8} style={styles.touchable}>
+        <BlurView intensity={50} tint="light" style={styles.buttonContainer}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Image
+                source={require('./../../assets/images/google.png')} 
+                style={styles.googleIcon}
+              />
+              <Text style={styles.buttonText}>Continue with Google</Text>
+            </>
+          )}
+        </BlurView>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 16,
+  touchable: {
+    ...Shadows.medium,
+    shadowColor: '#2E5C8A', 
+  },
+  buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
+    justifyContent: 'center',
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    overflow: 'hidden',
   },
   googleIcon: { 
     width: 24, 
@@ -56,7 +58,8 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...Typography.headline,
-    color: '#4C87B8',
+    color: '#FFFFFF',
+    fontFamily: 'outfit-medium',
   }
 });
 

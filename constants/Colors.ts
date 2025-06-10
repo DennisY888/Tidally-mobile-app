@@ -1,4 +1,5 @@
 // constants/Colors.ts
+
 export const Colors = {
   light: {
     text: '#1A2B3D', // Deep slate blue
@@ -42,107 +43,77 @@ export const Colors = {
   },
 };
 
-// Typography scale
+// Typography scale (This should remain as it was)
 export const Typography = {
-  largeTitle: {
-    fontFamily: 'outfit-bold',
-    fontSize: 34,
-    lineHeight: 41,
-  },
-  title1: {
-    fontFamily: 'outfit-bold',
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  title2: {
-    fontFamily: 'outfit-bold',
-    fontSize: 22,
-    lineHeight: 28,
-  },
-  title3: {
-    fontFamily: 'outfit-medium',
-    fontSize: 20,
-    lineHeight: 25,
-  },
-  headline: {
-    fontFamily: 'outfit-medium',
-    fontSize: 17,
-    lineHeight: 22,
-  },
-  body: {
-    fontFamily: 'outfit',
-    fontSize: 17,
-    lineHeight: 22,
-  },
-  callout: {
-    fontFamily: 'outfit',
-    fontSize: 16,
-    lineHeight: 21,
-  },
-  subhead: {
-    fontFamily: 'outfit',
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  footnote: {
-    fontFamily: 'outfit',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  caption1: {
-    fontFamily: 'outfit',
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  caption2: {
-    fontFamily: 'outfit',
-    fontSize: 11,
-    lineHeight: 13,
-  },
+  largeTitle: { fontFamily: 'outfit-bold', fontSize: 34, lineHeight: 41 },
+  title1: { fontFamily: 'outfit-bold', fontSize: 28, lineHeight: 34 },
+  title2: { fontFamily: 'outfit-bold', fontSize: 22, lineHeight: 28 },
+  title3: { fontFamily: 'outfit-medium', fontSize: 20, lineHeight: 25 },
+  headline: { fontFamily: 'outfit-medium', fontSize: 17, lineHeight: 22 },
+  body: { fontFamily: 'outfit', fontSize: 17, lineHeight: 22 },
+  callout: { fontFamily: 'outfit', fontSize: 16, lineHeight: 21 },
+  subhead: { fontFamily: 'outfit', fontSize: 15, lineHeight: 20 },
+  footnote: { fontFamily: 'outfit', fontSize: 13, lineHeight: 18 },
+  caption1: { fontFamily: 'outfit', fontSize: 12, lineHeight: 16 },
+  caption2: { fontFamily: 'outfit', fontSize: 11, lineHeight: 13 },
 };
 
-// Spacing system
+// Spacing system (This should remain as it was)
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48,
 };
 
-// Border radius
+// Border radius (This should remain as it was)
 export const BorderRadius = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-  full: 9999,
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, full: 9999,
 };
 
-// Shadows
+// Your original Shadows object
 export const Shadows = {
-  small: {
-    shadowColor: Colors.light.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+  light: {
+    small: {
+      shadowColor: Colors.light.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 1, // With RGBA colors, opacity is baked in. Set this to 1.
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    medium: {
+      shadowColor: Colors.light.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    large: {
+      shadowColor: Colors.light.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 1,
+      shadowRadius: 16,
+      elevation: 8,
+    },
   },
-  medium: {
-    shadowColor: Colors.light.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  large: {
-    shadowColor: Colors.light.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+  dark: {
+    small: {
+      shadowColor: Colors.dark.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 1,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    medium: {
+      shadowColor: Colors.dark.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    large: {
+      shadowColor: Colors.dark.shadow,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 1,
+      shadowRadius: 16,
+      elevation: 8,
+    },
   },
 };

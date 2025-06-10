@@ -1,14 +1,11 @@
-// app/(tabs)/home.jsx
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  StatusBar,
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   RefreshControl,
-  Animated,
   Platform,
   ActivityIndicator,
   SafeAreaView,
@@ -16,56 +13,22 @@ import {
   Image
 } from 'react-native';
 import { useNavigation } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView } from 'moti';
-import { collection, getDocs, query, where, limit, orderBy } from 'firebase/firestore';
-
-import { useTheme } from '../../context/ThemeContext';
-import { db } from '../../config/FirebaseConfig';
-import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
-import Header from '../../components/Home/Header';
-import Slider from '../../components/Home/Slider';
-import Folder from '../../components/Home/Folder';
-import Workout from '../../components/Home/Workout';
-import SectionHeader from '../../components/UI/SectionHeader';
-import EmptyState from '../../components/UI/EmptyState';
-import { WorkoutService } from '../../services/WorkoutService';
 import { debounce } from 'lodash';
 
-
-const WorkoutItem = React.memo(({ workout, index }) => {
-  return (
-    <MotiView
-      from={{ opacity: 0, translateY: 20 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ 
-        delay: Math.min(index, 5) * 70, // Cap delay at 5 items, reduce delay time
-        type: 'timing',
-        skipExitAnimation: true
-      }}
-    >
-      <Workout workout={workout} />
-    </MotiView>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison to prevent unnecessary rerenders
-  return prevProps.workout.id === nextProps.workout.id && 
-         prevProps.workout.updatedAt === nextProps.workout.updatedAt;
-});
-
-
+import { useTheme } from '../../context/ThemeContext';
+import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
+import Folder from '../../components/Home/Folder';
+import { WorkoutService } from '../../services/WorkoutService';
+import HighlightedText from '../../components/UI/HighlightedText';
 
 /**
  * Home Screen
- * 
- * Main navigation hub for the app displaying various workout collections:
- * - Featured workouts in a slider
- * - Category-based workouts
- * - User's recent workouts
+ *
+ * Main navigation hub for the app displaying various workout collections
+ * and a primary action to create new workouts.
  */
 export default function Home() {
   // State management
@@ -79,573 +42,332 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+
   // Hooks
   const { user } = useUser();
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const styles = getStyles(colors, isDark); // Create theme-aware styles
   const navigation = useNavigation();
-  
-  // Animation values
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-
-  // Add this helper function for smooth data updates
+  // Helper function for smooth data updates
   const mergeWorkouts = (newData, prevData) => {
-    // Guard against undefined newData
-    if (!newData) {
-      return prevData || [];
-    }
-    
-    // Guard against undefined prevData
-    if (!prevData) {
-      return newData;
-    }
-    
-    // Create a map of existing workouts for quick lookup
-    const existingWorkoutsMap = new Map(
-      prevData.map(workout => [workout.id, workout])
-    );
-    
-    // Create updated list with smooth transitions
+    if (!newData) return prevData || [];
+    if (!prevData) return newData;
+    const existingWorkoutsMap = new Map(prevData.map(workout => [workout.id, workout]));
     return newData.map(newWorkout => {
       const existingWorkout = existingWorkoutsMap.get(newWorkout.id);
-      // If workout exists, preserve reference but update fields
-      if (existingWorkout) {
-        return { ...existingWorkout, ...newWorkout };
-      }
-      // Otherwise use new workout
-      return newWorkout;
+      return existingWorkout ? { ...existingWorkout, ...newWorkout } : newWorkout;
     });
   };
 
+  // Helper function to determine search match context
+  const getMatchContext = (workout, term) => {
+    const lowercasedTerm = term.toLowerCase().trim();
+    if (!lowercasedTerm) return null;
+    if (workout.title?.toLowerCase().includes(lowercasedTerm)) return null;
+    const matchingExercise = workout.exercises?.find(ex =>
+      ex.name?.toLowerCase().includes(lowercasedTerm)
+    );
+    return matchingExercise ? matchingExercise.name : null;
+  };
 
+  // Debounced search function
   const debouncedSearch = useCallback(
     debounce(async (term) => {
-      if (!term || term.trim() === '') {
+      const trimmedTerm = term.trim();
+      if (!trimmedTerm) {
         setSearchResults([]);
         setIsSearching(false);
         return;
       }
-      
+      setIsSearching(true);
+      setIsSearchLoading(true);
       try {
-        const { workouts } = await WorkoutService.searchWorkouts(term);
+        const { workouts } = await WorkoutService.searchWorkouts(trimmedTerm);
         setSearchResults(workouts);
-        setIsSearching(term.trim() !== '');
       } catch (error) {
         console.error("Error in search:", error);
-        // Show empty results rather than a broken UI
         setSearchResults([]);
+      } finally {
+        setIsSearchLoading(false);
       }
-    }, 300), // 300ms is a common debounce time for search inputs
+    }, 300),
     []
   );
-  
 
   // Handler for search input
   const handleSearch = useCallback((text) => {
     setSearchTerm(text);
     debouncedSearch(text);
   }, [debouncedSearch]);
-  
 
-  // Clean up debounce on unmount to prevent memory leaks
+  // Clean up debounce on unmount
   useEffect(() => {
-    return () => {
-      debouncedSearch.cancel();
-    };
+    return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
 
-  
-  // Load initial data on component mount
+  // Initial data load
   useEffect(() => {
-    // First load cached data immediately
-    loadCachedData();
-    
-    // Then fetch fresh data in the background
-    setIsBackgroundRefreshing(true);
     loadInitialData();
-    
-    // Fade in animation
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      // When returning to this screen, refresh in the background
-      setIsBackgroundRefreshing(true);
-      refreshDataSilently();
-    });
-    
-    return unsubscribe;
-  }, [navigation, selectedCategory]);  // Add selectedCategory to dependencies
-  
-
-  /**
-   * Loads all initial workout data from Firestore
-   */
   const loadInitialData = async () => {
-    // Only show loading indicator for initial loads, not background refreshes
-    if (!isBackgroundRefreshing) {
-      setLoading(true);
-    }
+    setLoading(true);
+    // In a real app, you would fetch initial data here.
+    // For now, we just set loading to false to show the UI.
     setLoading(false);
-    setIsBackgroundRefreshing(false);
   };
 
-
-  const loadCachedData = useCallback(async () => {
-    try {
-      // 1. Get all cache keys at once
-      const keys = [
-        selectedCategory ? `cached_category_${selectedCategory}` : null
-      ].filter(Boolean); // Remove null values
-      
-      // 2. Use multiGet for batch operations
-      const cachedResults = await AsyncStorage.multiGet(keys);
-      
-      // 3. Process results with cache validation
-      for (const [key, value] of cachedResults) {
-        if (!value) continue;
-        
-        try {
-          const parsed = JSON.parse(value);
-          
-          // 4. Check cache expiration (1 hour)
-          if (!parsed.timestamp || (Date.now() - parsed.timestamp >= 3600000)) {
-            console.log(`Cache expired for ${key}`);
-            continue; // Skip expired cache
-          }
-          
-          if (key.startsWith('cached_category_')) {
-            setWorkouts(parsed.data || []);
-          }
-        } catch (e) {
-          console.error(`Error parsing cached data for ${key}:`, e);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading cached data:", error);
-    }
-  }, [selectedCategory]);
-
-
-  
-  const saveToCache = async (key, data) => {
-    try {
-      await AsyncStorage.setItem(key, JSON.stringify({
-        data,
-        timestamp: Date.now()
-      }));
-    } catch (error) {
-      console.error(`Error caching ${key}:`, error);
-    }
-  };
-
-
-  const navigateToAddWorkout = () => {
-    router.push('/add-new-workout');
-  };
-  
-
-  /**
-   * Fetches workouts filtered by category
-   * @param {string} category - The category to filter by
-   */
   const getWorkoutsByCategory = async (category) => {
     if (!category) return;
-    
+    setIsBackgroundRefreshing(true);
     try {
       const { workouts: categoryData } = await WorkoutService.getWorkouts({
         category,
         orderByField: 'id',
         limit: 10
       });
-      
       setWorkouts(prevWorkouts => mergeWorkouts(categoryData, prevWorkouts));
-      
-      // Cache the data
-      await saveToCache(`cached_category_${category}`, categoryData);
     } catch (error) {
       console.error(`Error loading workouts for category ${category}:`, error);
-    }
-  };
-
-
-  // Add this function after your other loading functions
-  const refreshDataSilently = async () => {
-    try {
-      const refreshPromises = [];
-      
-      // Also refresh category data if we have a category selected
-      if (selectedCategory) {
-        const safeCategoryRefresh = getWorkoutsByCategory(selectedCategory).catch(err => {
-          console.error(`Silent refresh error (category ${selectedCategory}):`, err);
-          return null;
-        });
-        refreshPromises.push(safeCategoryRefresh);
-      }
-      
-      // This will never throw since each promise is already catching its errors
-      await Promise.all(refreshPromises);
-    } catch (error) {
-      // This is a fallback in case there's an unexpected error in the Promise.all itself
-      console.error("Error refreshing data silently:", error);
     } finally {
       setIsBackgroundRefreshing(false);
     }
   };
-  
-  /**
-   * Handles pull-to-refresh functionality
-   */
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadInitialData();
+    if (selectedCategory) {
+      await getWorkoutsByCategory(selectedCategory);
+    }
     setRefreshing(false);
   };
 
-  
-  // Calculate header elevation based on scroll position
-  const headerElevation = scrollY.interpolate({
-    inputRange: [0, 50],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  
+  const navigateToAddWorkout = () => {
+    router.push('/add-new-workout');
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
-      <View style={[styles.header, { 
-        backgroundColor: colors.background,
-        borderBottomColor: colors.divider 
-      }]}>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Workout App</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={navigateToAddWorkout}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle-outline" size={28} color={colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.profileButton}
-              onPress={() => router.push('/profile')}
-              activeOpacity={0.7}
-            >
-              {user?.imageUrl ? (
-                <Image 
-                  source={{ uri: user.imageUrl }} 
-                  style={styles.profileImage}
-                />
-              ) : (
-                <Ionicons name="person-circle-outline" size={28} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.headerTitle}>Tidally</Text>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => router.push('/profile')}
+            activeOpacity={0.7}
+          >
+            {user?.imageUrl ? (
+              <Image
+                source={{ uri: user.imageUrl }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <Ionicons name="person-circle-outline" size={32} color={colors.primary} />
+            )}
+          </TouchableOpacity>
         </View>
-        
-        {/* Search input */}
         <TextInput
           style={styles.searchInput}
-          placeholder="Search Workouts..."
-          placeholderTextColor="#999"
+          placeholder="Search workouts or exercises..."
+          placeholderTextColor={colors.textTertiary}
           value={searchTerm}
           onChangeText={handleSearch}
           returnKeyType="search"
           clearButtonMode="while-editing"
         />
       </View>
-      
+
+      {/* Main Content Area */}
       {loading ? (
-        <View style={[styles.loadingContainer, { backgroundColor: colors.backgroundSecondary }]}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <ScrollView 
-          style={styles.contentContainer}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {isSearching ? (
-            // Search results UI
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Search Results</Text>
-              
-              {searchResults.length > 0 ? (
-                // Match the existing styles exactly
-                <View style={styles.categoryContent}>
-                  {searchResults.map((workout) => (
-                    <TouchableOpacity
-                      key={workout.id}
-                      style={styles.workoutItem}
-                      onPress={() => router.push({
-                        pathname: '/workout-details',
-                        params: {
-                          id: workout.id,  // Use 'id' parameter name to match what workout-details expects
-                          title: workout.title,
-                          imageUrl: workout.imageUrl,
-                          category: workout.category,
-                          description: workout.description || "",
-                          est_time: workout.est_time || "0",
-                          exercises: JSON.stringify(workout.exercises || []),  // JSON stringify the exercises
-                          user: JSON.stringify(workout.user || {})  // JSON stringify the user
-                        }
-                      })}
-                    >
-                  
-                      <Image
-                        source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
-                        style={styles.workoutImage}
-                        resizeMode="cover"
-                      />
-                      <View style={styles.workoutDetails}>
-                        <Text style={styles.workoutTitle}>{workout.title}</Text>
-                        <Text style={styles.workoutSubtitle}>{workout.category}</Text>
-                        <Text style={styles.workoutMeta}>
-                          {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>
-                    No workouts found matching "{searchTerm}"
-                  </Text>
-                  <Text style={styles.emptySubtext}>
-                    Try a different keyword or check spelling
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            // Normal home page content - ensure we're using your exact component structure
-            <>
-              <Folder 
-                category={(value) => {
-                  setSelectedCategory(value);
-                  
-                  AsyncStorage.getItem(`cached_category_${value}`)
-                    .then(cachedData => {
-                      if (cachedData) {
-                        try {
-                          const parsed = JSON.parse(cachedData);
-                          if (parsed && Array.isArray(parsed.data)) {
-                            setWorkouts(prevWorkouts => mergeWorkouts(parsed.data, prevWorkouts));
-                          }
-                        } catch (parseError) {
-                          console.error(`Error parsing cached data for category ${value}:`, parseError);
-                        }
-                      }
-                      
-                      setIsBackgroundRefreshing(true);
-                      getWorkoutsByCategory(value);
-                    })
-                    .catch(error => {
-                      console.error("Error getting cached category data:", error);
-                      getWorkoutsByCategory(value);
-                    });
-                }}
-                selectedCategory={selectedCategory}
-              />
-              
-              {/* Selected Category Workouts */}
-              {selectedCategory && workouts.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>{selectedCategory}</Text>
-                  <View style={styles.categoryContent}>
-                    {workouts.map((workout) => (
-                      <TouchableOpacity
-                        key={workout.id}
-                        style={styles.workoutItem}
-                        onPress={() => router.push({
-                          pathname: '/workout-details',
-                          params: {
-                            id: workout.id,  // Use 'id' parameter name to match what workout-details expects
-                            title: workout.title,
-                            imageUrl: workout.imageUrl,
-                            category: workout.category,
-                            description: workout.description || "",
-                            est_time: workout.est_time || "0",
-                            exercises: JSON.stringify(workout.exercises || []),  // JSON stringify the exercises
-                            user: JSON.stringify(workout.user || {})  // JSON stringify the user
-                          }
-                        })}
-                      >
-                        <Image
-                          source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
-                          style={styles.workoutImage}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.workoutDetails}>
-                          <Text style={styles.workoutTitle}>{workout.title}</Text>
-                          <Text style={styles.workoutSubtitle}>{workout.category}</Text>
-                          <Text style={styles.workoutMeta}>
-                            {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={styles.contentContainer}
+            contentInset={{ bottom: 80 }}
+            scrollIndicatorInsets={{ bottom: 80 }}
+            contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 90 : 0 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {isSearching ? (
+              // Search UI
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Search Results</Text>
+                {isSearchLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
                   </View>
-                </View>
-              )}
-            </>
-          )}
-        </ScrollView>
+                ) : searchResults.length > 0 ? (
+                  <View style={styles.listContent}>
+                    {searchResults.map((workout) => {
+                      const matchContext = getMatchContext(workout, searchTerm);
+                      return (
+                        <TouchableOpacity
+                          key={workout.id}
+                          style={styles.workoutItem}
+                          onPress={() => router.push({
+                            pathname: '/workout-details',
+                            params: {
+                              id: workout.id,
+                              title: workout.title,
+                              imageUrl: workout.imageUrl,
+                              category: workout.category,
+                              description: workout.description || "",
+                              est_time: workout.est_time || "0",
+                              exercises: JSON.stringify(workout.exercises || []),
+                              user: JSON.stringify(workout.user || {})
+                            }
+                          })}
+                        >
+                          <Image
+                            source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
+                            style={styles.workoutImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.workoutDetails}>
+                            <HighlightedText
+                              text={workout.title}
+                              highlight={searchTerm}
+                              style={styles.workoutTitle}
+                            />
+                            {matchContext ? (
+                              <View style={styles.matchContextContainer}>
+                                <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
+                                <Text style={styles.matchContextText} numberOfLines={1}>
+                                  Matches: <HighlightedText
+                                                    text={matchContext}
+                                                    highlight={searchTerm}
+                                                    style={{ fontFamily: 'outfit-medium' }}
+                                                  />
+                                </Text>
+                              </View>
+                            ) : (
+                              <Text style={styles.workoutSubtitle} numberOfLines={1}>{workout.category}</Text>
+                            )}
+                            <Text style={styles.workoutMeta}>
+                              {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      No workouts found for "{searchTerm}"
+                    </Text>
+                    <Text style={styles.emptySubtext}>
+                      Try a different keyword or check spelling.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              // Normal Home Page UI
+              <>
+                <Folder
+                  category={(value) => {
+                    setSelectedCategory(value);
+                    getWorkoutsByCategory(value);
+                  }}
+                  selectedCategory={selectedCategory}
+                />
+                {isBackgroundRefreshing && !workouts.length ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  </View>
+                ) : selectedCategory && workouts.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>{selectedCategory}</Text>
+                    <View style={styles.listContent}>
+                      {workouts.map((workout) => (
+                        <TouchableOpacity
+                          key={workout.id}
+                          style={styles.workoutItem}
+                          onPress={() => router.push({
+                            pathname: '/workout-details',
+                            params: {
+                              id: workout.id,
+                              title: workout.title,
+                              imageUrl: workout.imageUrl,
+                              category: workout.category,
+                              description: workout.description || "",
+                              est_time: workout.est_time || "0",
+                              exercises: JSON.stringify(workout.exercises || []),
+                              user: JSON.stringify(workout.user || {})
+                            }
+                          })}
+                        >
+                          <Image
+                            source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
+                            style={styles.workoutImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.workoutDetails}>
+                            <Text style={styles.workoutTitle}>{workout.title}</Text>
+                            <Text style={styles.workoutSubtitle}>{workout.category}</Text>
+                            <Text style={styles.workoutMeta}>
+                              {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+          </ScrollView>
+
+          {/* Floating Action Button */}
+          <View style={[styles.bottomBar, { borderTopColor: colors.divider }]}>
+            <TouchableOpacity
+              style={[styles.createButton, { backgroundColor: colors.primary }]}
+              onPress={navigateToAddWorkout}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+              <Text style={styles.createButtonText}>Create a Workout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+// Theme-aware Style Factory
+const getStyles = (colors, isDark) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
-    padding: 15,
+    backgroundColor: colors.background,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    borderBottomColor: colors.divider,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.md,
   },
-  addButton: {
-    width: 44,          // Apple minimum touch target
-    height: 44,         // Apple minimum touch target
-    borderRadius: 22,   // Perfect circle
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(46, 92, 138, 0.1)',  // Subtle background using primary color
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  section: {
-    marginVertical: 15,
-    paddingHorizontal: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  horizontalCard: {
-    width: 150,
-    marginRight: 15,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  horizontalCardImage: {
-    width: '100%',
-    height: 100,
-    backgroundColor: '#f0f0f0',
-  },
-  horizontalCardTitle: {
-    padding: 10,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  categoryContent: {
-    marginTop: 10,
-  },
-  workoutItem: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 15,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  workoutImage: {
-    width: 100,
-    height: 100,
-    backgroundColor: '#f0f0f0',
-  },
-  workoutDetails: {
-    flex: 1,
-    padding: 10,
-    justifyContent: 'center',
-  },
-  workoutTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  workoutSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  workoutMeta: {
-    fontSize: 12,
-    color: '#999',
-  },
-  searchInput: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    backgroundColor: '#fff',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 30,
-    marginTop: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  headerTitle: {
+    ...Typography.title1,
+    color: colors.text,
   },
   profileButton: {
     width: 44,
@@ -653,12 +375,134 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(46, 92, 138, 0.1)',
     overflow: 'hidden',
   },
   profileImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  searchInput: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    color: colors.text,
+    ...Typography.body,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  section: {
+    paddingTop: Spacing.lg,
+  },
+  sectionTitle: {
+    ...Typography.title2,
+    color: colors.text,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  listContent: {
+    paddingHorizontal: Spacing.lg,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  workoutItem: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.md,
+    ...Shadows.small,
+    elevation: isDark ? 1 : 3,
+  },
+  workoutImage: {
+    width: 100,
+    height: '100%',
+    backgroundColor: colors.backgroundSecondary,
+    borderTopLeftRadius: BorderRadius.lg,
+    borderBottomLeftRadius: BorderRadius.lg,
+  },
+  workoutDetails: {
+    flex: 1,
+    padding: Spacing.md,
+    justifyContent: 'center',
+  },
+  workoutTitle: {
+    ...Typography.headline,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  workoutSubtitle: {
+    ...Typography.subhead,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  workoutMeta: {
+    ...Typography.caption1,
+    color: colors.textTertiary,
+  },
+
+  matchContextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: colors.success + '1A',
+    borderRadius: BorderRadius.sm,
+    alignSelf: 'flex-start',
+  },
+  matchContextText: {
+    ...Typography.caption1,
+    color: colors.textSecondary,
+    marginLeft: 4,
+    flexShrink: 1,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    marginTop: Spacing.xl,
+  },
+  emptyText: {
+    ...Typography.headline,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  emptySubtext: {
+    ...Typography.body,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.background,
+    padding: Spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.md,
+    borderTopWidth: 1,
+  },
+  createButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    ...Shadows.medium,
+  },
+  createButtonText: {
+    ...Typography.headline,
+    color: '#fff',
+    marginLeft: Spacing.sm,
   },
 });

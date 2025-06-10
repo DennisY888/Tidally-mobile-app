@@ -420,7 +420,6 @@ export default function WorkoutDetails() {
                 ]}
               >
                 <View style={styles.exerciseList}>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
                   <ExercisesList 
                     exercises={workoutExercises} 
                     onDragEnd={handleDragEnd}
@@ -429,7 +428,6 @@ export default function WorkoutDetails() {
                     onAddExercise={handleAddExercise}
                     isUpdatingOrder={isSaving}
                   />
-                  </GestureHandlerRootView>
                 </View>
               </Animated.View>
               
