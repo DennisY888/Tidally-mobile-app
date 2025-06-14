@@ -46,68 +46,7 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
       }
     });
   };
-  
-  /**
-   * Initiate a chat with the workout creator
-   */
-  const initiateChat = async() => {
-    try {
-      // Verify required data exists
-      if (!user?.primaryEmailAddress?.emailAddress || !workout?.user?.email || 
-          !user?.imageUrl || !user?.fullName || 
-          !workout?.user?.imageUrl || !workout?.user?.name) {
-        console.error("Missing required user data");
-        return;
-      }
-  
-      // Check if it's the user's own workout
-      if (user.primaryEmailAddress.emailAddress === workout.user.email) {
-        if (Platform.OS === 'android') {
-          ToastAndroid.show("This is your own workout", ToastAndroid.SHORT);
-        } else {
-          Alert.alert("Note", "This is your own workout");
-        }
-        return;
-      }
-      
-      const docId1 = user.primaryEmailAddress.emailAddress+'_'+workout.user.email;
-      const docId2 = workout.user.email+'_'+user.primaryEmailAddress.emailAddress;
-      const q = query(collection(db,'Chat'), where('id','in',[docId1,docId2]));
-      
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        return router.push({
-          pathname: 'chat-details',
-          params: {id: querySnapshot.docs[0].id}
-        });
-      }
-  
-      // Create new chat document
-      await setDoc(doc(db,'Chat',docId1), {
-        id: docId1,
-        users: [
-          {   
-            email: user.primaryEmailAddress.emailAddress,
-            imageUrl: user.imageUrl,
-            name: user.fullName
-          },
-          {
-            email: workout.user.email,
-            imageUrl: workout.user.imageUrl,
-            name: workout.user.name
-          }
-        ],
-        userIds: [user.primaryEmailAddress.emailAddress, workout.user.email]
-      });
-      
-      return router.push({
-        pathname: 'chat-details',
-        params: {id: docId1}
-      });
-    } catch (error) {
-      console.error("InitiateChat error:", error);
-    }
-  };
+
   
   /**
    * Add a new exercise to the workout
@@ -227,7 +166,6 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
   return {
     handleShare,
     handlePlayWorkout,
-    initiateChat,
     addExercise,
     saveEditedExercise,
     handleDeleteExercise,

@@ -23,6 +23,7 @@ import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colo
 import Folder from '../../components/Home/Folder';
 import { WorkoutService } from '../../services/WorkoutService';
 import HighlightedText from '../../components/UI/HighlightedText';
+import { useWorkouts } from '../../hooks/useWorkouts';
 
 /**
  * Home Screen
@@ -32,11 +33,7 @@ import HighlightedText from '../../components/UI/HighlightedText';
  */
 export default function Home() {
   // State management
-  const [workouts, setWorkouts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
 
   // State for search functionality
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,17 +47,8 @@ export default function Home() {
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark); // Create theme-aware styles
   const navigation = useNavigation();
+  const { workouts, loading } = useWorkouts(selectedCategory);
 
-  // Helper function for smooth data updates
-  const mergeWorkouts = (newData, prevData) => {
-    if (!newData) return prevData || [];
-    if (!prevData) return newData;
-    const existingWorkoutsMap = new Map(prevData.map(workout => [workout.id, workout]));
-    return newData.map(newWorkout => {
-      const existingWorkout = existingWorkoutsMap.get(newWorkout.id);
-      return existingWorkout ? { ...existingWorkout, ...newWorkout } : newWorkout;
-    });
-  };
 
   // Helper function to determine search match context
   const getMatchContext = (workout, term) => {
@@ -85,7 +73,7 @@ export default function Home() {
       setIsSearching(true);
       setIsSearchLoading(true);
       try {
-        const { workouts } = await WorkoutService.searchWorkouts(trimmedTerm);
+        const { workouts } = await WorkoutService.searchWorkouts(trimmedTerm, user.primaryEmailAddress.emailAddress);
         setSearchResults(workouts);
       } catch (error) {
         console.error("Error in search:", error);
@@ -108,46 +96,11 @@ export default function Home() {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
 
-  // Initial data load
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  const loadInitialData = async () => {
-    setLoading(true);
-    // In a real app, you would fetch initial data here.
-    // For now, we just set loading to false to show the UI.
-    setLoading(false);
-  };
-
-  const getWorkoutsByCategory = async (category) => {
-    if (!category) return;
-    setIsBackgroundRefreshing(true);
-    try {
-      const { workouts: categoryData } = await WorkoutService.getWorkouts({
-        category,
-        orderByField: 'id',
-        limit: 10
-      });
-      setWorkouts(prevWorkouts => mergeWorkouts(categoryData, prevWorkouts));
-    } catch (error) {
-      console.error(`Error loading workouts for category ${category}:`, error);
-    } finally {
-      setIsBackgroundRefreshing(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    if (selectedCategory) {
-      await getWorkoutsByCategory(selectedCategory);
-    }
-    setRefreshing(false);
-  };
 
   const navigateToAddWorkout = () => {
     router.push('/add-new-workout');
   };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -182,20 +135,12 @@ export default function Home() {
       </View>
 
       {/* Main Content Area */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
         <View style={{ flex: 1 }}>
           <ScrollView
             style={styles.contentContainer}
             contentInset={{ bottom: 80 }}
             scrollIndicatorInsets={{ bottom: 80 }}
             contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 90 : 0 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
           >
             {isSearching ? (
               // Search UI
@@ -277,23 +222,24 @@ export default function Home() {
                 <Folder
                   category={(value) => {
                     setSelectedCategory(value);
-                    getWorkoutsByCategory(value);
                   }}
                   selectedCategory={selectedCategory}
+                  user={user}
                 />
-                {isBackgroundRefreshing && !workouts.length ? (
+                {loading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                   </View>
-                ) : selectedCategory && workouts.length > 0 && (
+                ) : workouts.length > 0 ? (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{selectedCategory}</Text>
+                    <Text style={styles.sectionTitle}>{selectedCategory || 'Your Workouts'}</Text>
                     <View style={styles.listContent}>
                       {workouts.map((workout) => (
                         <TouchableOpacity
-                          key={workout.id}
+                          key={workout._id} // Using the correct unique key from the hook
                           style={styles.workoutItem}
                           onPress={() => router.push({
+                            // This part will be refactored in our next step to fix navigation
                             pathname: '/workout-details',
                             params: {
                               id: workout.id,
@@ -323,6 +269,15 @@ export default function Home() {
                       ))}
                     </View>
                   </View>
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      No workouts found
+                    </Text>
+                    <Text style={styles.emptySubtext}>
+                      Create your first workout to see it here!
+                    </Text>
+                  </View>
                 )}
               </>
             )}
@@ -340,7 +295,6 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
     </SafeAreaView>
   );
 }

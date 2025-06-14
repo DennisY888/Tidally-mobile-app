@@ -27,10 +27,8 @@ import MarkFav from '../../components/MarkFav';
 import ExercisesList from '../../components/WorkoutDetails/ExercisesList';
 import AddExerciseModal from '../../components/WorkoutDetails/AddExerciseModal';
 import EditExerciseModal from '../../components/WorkoutDetails/EditExerciseModal';
-import CreatorProfile from '../../components/WorkoutDetails/CreatorProfile';
 import WorkoutStats from '../../components/WorkoutDetails/WorkoutStats';
 import AnimatedWorkoutHeader from '../../components/WorkoutDetails/AnimatedWorkoutHeader';
-import TabNavigator from '../../components/WorkoutDetails/TabNavigator';
 import { useWorkoutActions } from '../../hooks/useWorkoutActions';
 import { WorkoutService } from '../../services/WorkoutService';
 
@@ -64,7 +62,6 @@ export default function WorkoutDetails() {
   const scrollY = useRef(new Animated.Value(0)).current;
   
   // State
-  const [activeTab, setActiveTab] = useState('exercises');
   const [workoutExercises, setWorkoutExercises] = useState(workout.exercises);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [isSaving, setSaving] = useState(false);
@@ -83,7 +80,6 @@ export default function WorkoutDetails() {
   const {
     handleShare,
     handlePlayWorkout,
-    initiateChat,
     addExercise,
     saveEditedExercise,
     handleDeleteExercise,
@@ -250,41 +246,6 @@ export default function WorkoutDetails() {
     }
   };
   
-
-  /**
-   * Handle tab change and animate between tabs
-   * @param {string} tab - The tab to change to
-   */
-  const changeTab = (tab) => {
-    setActiveTab(tab);
-    if (tab === 'exercises') {
-      Animated.parallel([
-        Animated.timing(exercisesOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(creatorOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(exercisesOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(creatorOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  };
   
   /**
    * Handle exercise options (edit/delete)
@@ -402,50 +363,15 @@ export default function WorkoutDetails() {
               colors={colors} 
             />
             
-            {/* Tab Navigation */}
-            <TabNavigator 
-              activeTab={activeTab} 
-              onChange={changeTab} 
-              isDark={isDark} 
-              colors={colors} 
-            />
-            
-            {/* Tab Content Container */}
-            <View style={styles.tabContentContainer}>
-              {/* Exercises Tab Content */}
-              <Animated.View 
-                style={[
-                  styles.tabContent,
-                  { opacity: exercisesOpacity, display: activeTab === 'exercises' ? 'flex' : 'none' }
-                ]}
-              >
-                <View style={styles.exerciseList}>
-                  <ExercisesList 
-                    exercises={workoutExercises} 
-                    onDragEnd={handleDragEnd}
-                    onDragStart={handleDragStart}
-                    onExerciseOptions={handleExerciseOptions}
-                    onAddExercise={handleAddExercise}
-                    isUpdatingOrder={isSaving}
-                  />
-                </View>
-              </Animated.View>
-              
-              {/* Creator Tab Content */}
-              <Animated.View 
-                style={[
-                  styles.tabContent,
-                  styles.creatorContent,
-                  { opacity: creatorOpacity, display: activeTab === 'creator' ? 'flex' : 'none' }
-                ]}
-              >
-                <CreatorProfile 
-                  workoutCreator={workout.user}
-                  onMessagePress={initiateChat}
-                  isDark={isDark}
-                  colors={colors}
-                />
-              </Animated.View>
+            <View style={styles.exerciseList}>
+              <ExercisesList 
+                exercises={workoutExercises} 
+                onDragEnd={handleDragEnd}
+                onDragStart={handleDragStart}
+                onExerciseOptions={handleExerciseOptions}
+                onAddExercise={handleAddExercise}
+                isUpdatingOrder={isSaving}
+              />
             </View>
           </View>
         </Animated.ScrollView>

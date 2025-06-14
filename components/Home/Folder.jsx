@@ -11,14 +11,15 @@ import {
   Dimensions,
   ScrollView
 } from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from './../../config/FirebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
 
-export default function Folder({ category }) {
+
+export default function Folder({ category, user }) {
   const [categoryList, setCategoryList] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,16 @@ export default function Folder({ category }) {
     setLoading(true);
     setCategoryList([]);
     try {
-      const snapshot = await getDocs(collection(db, 'Category'));
+      if (!user?.primaryEmailAddress?.emailAddress) {
+        setCategoryList([]);
+        setLoading(false);
+        return;
+      }
+      const q = query(
+        collection(db, 'Category'),
+        where('userEmail', '==', user.primaryEmailAddress.emailAddress)
+      );
+      const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => doc.data());
       setCategoryList(data);
       
@@ -54,7 +64,7 @@ export default function Folder({ category }) {
   };
 
 
-  // Chunk data into groups of 4 for 2×2 grid
+  // Chunk data into groups of 6 for 3x3 grid
   const chunkedCategories = useMemo(() => {
     const chunks = [];
     for (let i = 0; i < categoryList.length; i += 6) {  
