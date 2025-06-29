@@ -10,13 +10,14 @@ import {
   ToastAndroid, 
   Animated,
   Platform,
-  Alert
+  Alert,
+  TouchableOpacity
 } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { collection, doc, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, serverTimestamp, addDoc, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useUser } from '@clerk/clerk-expo';
 
@@ -27,18 +28,8 @@ import FormField from '../../components/Forms/FormField';
 import ExerciseItem from '../../components/Workout/ExerciseItem';
 import ActionButton from '../../components/UI/ActionButton';
 import AnimatedHeader from '../../components/UI/AnimatedHeader';
+import { showToast } from '../../utils/helpers';
 
-/**
- * Toast notification helper for cross-platform support
- * @param {string} message - Message to display
- */
-const showToast = (message) => {
-  if (Platform.OS === 'android') {
-    ToastAndroid.show(message, ToastAndroid.SHORT);
-  } else {
-    Alert.alert('', message, [{ text: 'OK' }], { cancelable: true });
-  }
-};
 
 /**
  * Add New Workout Screen
@@ -94,7 +85,7 @@ export default function AddNewWorkout() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [user]);
   
   /**
    * Fetch categories from Firestore
@@ -102,7 +93,16 @@ export default function AddNewWorkout() {
   const getCategories = async() => {
     setCategoryList([]);
     try {
-      const snapshot = await getDocs(collection(db, 'Category'));
+      if (!user?.primaryEmailAddress?.emailAddress) {
+        console.log("No user found, cannot fetch categories.");
+        return;
+      }
+      
+      const q = query(
+        collection(db, 'Category'),
+        where('userEmail', '==', user.primaryEmailAddress.emailAddress)
+      );
+      const snapshot = await getDocs(q);
       const categories = [];
       snapshot.forEach((doc) => {
         categories.push(doc.data());
@@ -254,6 +254,64 @@ export default function AddNewWorkout() {
       showToast("Failed to save workout");
     }
   };
+
+
+    /**
+   * Handles the creation of a new category.
+   * This function is triggered by the "New" button.
+   */
+    const handleAddNewCategory = () => {
+      // Alert.prompt provides a native dialog for text input, a great UX choice.
+      Alert.prompt(
+        "New Category",
+        "Enter a name for your new folder:",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Create",
+            onPress: async (categoryName) => {
+              // 1. Validate: Ensure the input is not empty.
+              if (!categoryName || categoryName.trim() === '') {
+                showToast("Category name cannot be empty.");
+                return;
+              }
+              const trimmedName = categoryName.trim();
+              
+              // 2. Validate: Prevent duplicate categories (case-insensitive).
+              if (categoryList.some(cat => cat.name.toLowerCase() === trimmedName.toLowerCase())) {
+                showToast(`Category "${trimmedName}" already exists.`);
+                return;
+              }
+  
+              // 3. Securely write to the database inside a try/catch block.
+              try {
+                const newCategory = {
+                  name: trimmedName,
+                  userEmail: user.primaryEmailAddress.emailAddress, // <-- Critical for security
+                  imageUrl: 'https://img.icons8.com/plasticine/100/folder-invoices.png',
+                };
+                
+                const docRef = await addDoc(collection(db, 'Category'), newCategory);
+  
+                // 4. Provide immediate UI feedback for a responsive feel.
+                const categoryWithId = { ...newCategory, id: docRef.id };
+                setCategoryList(prev => [...prev, categoryWithId]);
+                setSelectedCategory(categoryWithId.name);
+                handleInputChange('category', categoryWithId.name);
+  
+                showToast("Category created successfully!");
+  
+              } catch (error) {
+                console.error("Error creating new category:", error);
+                showToast("Failed to create category.");
+              }
+            },
+          },
+        ],
+        "plain-text"
+      );
+    };
+
   
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
@@ -318,7 +376,14 @@ export default function AddNewWorkout() {
           
           {/* Category Selector */}
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
+            {/* This new container allows the label and button to sit side-by-side. */}
+            <View style={styles.labelContainer}>
+              <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
+              <TouchableOpacity onPress={handleAddNewCategory} style={styles.addButton}>
+                <Ionicons name="add-circle" size={22} color={colors.primary} />
+                <Text style={[styles.addButtonText, { color: colors.primary }]}>New</Text>
+              </TouchableOpacity>
+            </View>
             <View style={[styles.pickerContainer, { 
               backgroundColor: colors.backgroundSecondary,
               borderColor: colors.divider 
@@ -555,5 +620,21 @@ const styles = StyleSheet.create({
   },
   exerciseItems: {
     marginTop: Spacing.sm,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4, // Makes the touch target larger for better UX
+  },
+  addButtonText: {
+    ...Typography.subhead,
+    marginLeft: 4,
+    fontFamily: 'outfit-medium', // Use medium weight for emphasis
   },
 });

@@ -9,6 +9,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Typography, Spacing} from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 
+
 export default function Favorite() {
   const { user } = useUser();
   const { favWorkouts, loader } = useFavorites();
@@ -31,12 +32,14 @@ export default function Favorite() {
       <FlatList
         data={favWorkouts}
         numColumns={2}
+        keyExtractor={(item) => item.id}
+        columnWrapperStyle={{ justifyContent: 'space-between' }}
         refreshing={loader}
         contentContainerStyle={favWorkouts.length === 0 && styles.centerContent}
         ListEmptyComponent={renderEmptyState}
         renderItem={({ item }) => (
           <View style={styles.workoutContainer}>
-            <Workout workout={item} />
+            <Workout workout={item} layout='grid' />
           </View>
         )}
       />
@@ -49,6 +52,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: Spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingHorizontal: Spacing.md
   },
   title: {
     ...Typography.title1,
@@ -57,6 +61,7 @@ const styles = StyleSheet.create({
   workoutContainer: {
     margin: Spacing.xs,
     width: '48%',
+    marginBottom: Spacing.md
   },
   centerContent: {
     flex: 1,

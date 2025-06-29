@@ -13,6 +13,7 @@ import { Platform } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 import { Colors } from '../constants/Colors';
 import { FavoritesProvider } from '../hooks/useRealtimeFavorites';
+import { WorkoutDetailProvider } from '../context/WorkoutDetailContext';
 
 
 // Token cache implementation for Clerk
@@ -40,6 +41,7 @@ const tokenCache = {
     }
   },
 };
+
 
 // StatusBar controller that manages status bar appearance based on theme and current route
 function StatusBarController() {
@@ -97,6 +99,7 @@ function StatusBarController() {
   return null;
 }
 
+
 // Main app container with theme
 function ThemedApp({ children }) {
   const { colors, isThemeLoaded } = useTheme();
@@ -115,6 +118,7 @@ function ThemedApp({ children }) {
     </View>
   );
 }
+
 
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -137,13 +141,16 @@ export default function RootLayout() {
         <ThemeProvider>
           <StatusBar hidden={true} />
           <FavoritesProvider>
-          <ThemedApp>
-              <Stack>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="login/index" options={{ headerShown: false }} />
-              </Stack>
-            </ThemedApp>
+            <WorkoutDetailProvider>
+              <ThemedApp>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="login/index" options={{ headerShown: false }} />
+                  <Stack.Screen name="stopwatch/index" options={{ headerShown: false }} />
+                </Stack>
+              </ThemedApp>
+            </WorkoutDetailProvider>
           </FavoritesProvider>
         </ThemeProvider>
       </NetworkProvider>

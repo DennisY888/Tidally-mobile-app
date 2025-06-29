@@ -1,24 +1,32 @@
 // components/Home/Workout.jsx
-import React, { useState, useRef } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { 
   View, 
   Text, 
   Image, 
   StyleSheet,
   Animated,
-  Pressable
+  Pressable,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+import { WorkoutService } from '../../services/WorkoutService';
 import { Colors, Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import MarkFav from './../../components/MarkFav';
+import { useActiveWorkout } from '../../context/WorkoutDetailContext';
 
-export default function Workout({ workout }) {
+
+export default function Workout({ workout, layout = 'row' }) {
   const router = useRouter();
-  const [isPressed, setIsPressed] = useState(false);
+  const { setActiveWorkout } = useActiveWorkout();
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  // Get the difficulty level based on estimated time (just an example)
+
+  // Get the difficulty level based on estimated time 
   const getDifficultyLevel = () => {
     const time = parseInt(workout?.est_time) || 0;
     if (time < 20) return { level: 'Beginner', color: Colors.light.success };
@@ -31,9 +39,9 @@ export default function Workout({ workout }) {
   // Count number of exercises
   const exerciseCount = workout?.exercises?.length || 0;
   
+
   // Handle press animation
   const handlePressIn = () => {
-    setIsPressed(true);
     Animated.timing(scaleAnim, {
       toValue: 0.95,
       duration: 150,
@@ -41,8 +49,8 @@ export default function Workout({ workout }) {
     }).start();
   };
   
+
   const handlePressOut = () => {
-    setIsPressed(false);
     Animated.timing(scaleAnim, {
       toValue: 1,
       duration: 150,
@@ -50,18 +58,75 @@ export default function Workout({ workout }) {
     }).start();
   };
   
+
   const navigateToWorkout = () => {
-    router.push({
-      pathname: '/workout-details',
-      params: {
-        ...workout,
-        id: workout.id,
-        exercises: JSON.stringify(workout.exercises),
-        user: JSON.stringify(workout.user)
-      }
-    });
+    setActiveWorkout(workout); 
+    router.push('/workout-details/' + workout.id);
   };
+
+
+  const handleLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    Alert.alert(
+      "Workout Options",
+      `What would you like to do with "${workout?.title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: handleDeleteWorkout
+        }
+      ]
+    );
+  }, [workout]);
   
+  const handleDeleteWorkout = useCallback(async () => {
+    Alert.alert(
+      "Delete Workout",
+      `Are you sure you want to delete "${workout?.title}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setIsDeleting(true);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              
+              const success = await WorkoutService.deleteWorkout(
+                workout.id, 
+                workout.user?.email
+              );
+              
+              if (success) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                // Real-time listeners will automatically update the UI
+              } else {
+                setIsDeleting(false);
+                Alert.alert("Error", "Failed to delete workout. Please try again.");
+              }
+            } catch (error) {
+              setIsDeleting(false);
+              console.error("Error deleting workout:", error);
+              Alert.alert("Error", "Failed to delete workout. Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  }, [workout]);
+
+
+  const isRowLayout = layout === 'row';
+  const containerStyle = isRowLayout ? styles.rowContainer : styles.gridContainer;
+  const pressableStyle = isRowLayout ? styles.rowPressable : styles.gridPressable;
+  const imageContainerStyle = isRowLayout ? styles.rowImageContainer : styles.gridImageContainer;
+  const infoContainerStyle = isRowLayout ? styles.rowInfoContainer : styles.gridInfoContainer;
+  
+
   return (
     <Animated.View 
       style={[
@@ -73,6 +138,7 @@ export default function Workout({ workout }) {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={navigateToWorkout}
+        onLongPress={handleLongPress}
         style={styles.pressable}
       >
         {/* Workout Image */}
@@ -123,51 +189,32 @@ export default function Workout({ workout }) {
               <Text style={styles.statText}>{exerciseCount} exercises</Text>
             </View>
           </View>
-          
-          {/* Creator info */}
-          {workout?.user?.name && (
-            <View style={styles.creatorContainer}>
-              {workout?.user?.imageUrl ? (
-                <Image 
-                  source={{ uri: workout.user.imageUrl }} 
-                  style={styles.creatorImage} 
-                />
-              ) : (
-                <View style={styles.creatorImagePlaceholder}>
-                  <Text style={styles.creatorInitials}>
-                    {workout.user.name.substring(0, 1)}
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.creatorName} numberOfLines={1}>
-                by {workout.user.name}
-              </Text>
-            </View>
-          )}
         </View>
       </Pressable>
     </Animated.View>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
-    width: 180,
+    width: '100%',
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
     backgroundColor: Colors.light.background,
     marginRight: Spacing.md,
     marginBottom: Spacing.md,
-    ...Shadows.medium,
+    ...Shadows.light.medium,
   },
   pressable: {
-    flex: 1,
+    flexDirection: 'row',
   },
   imageContainer: {
     position: 'relative',
-    height: 140,
+    height: 110,
+    width: 110,
     borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
+    borderBottomLeftRadius: BorderRadius.lg,
     overflow: 'hidden',
   },
   image: {
@@ -192,7 +239,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.small,
+    ...Shadows.light.small,
   },
   difficultyBadge: {
     position: 'absolute',
@@ -209,6 +256,8 @@ const styles = StyleSheet.create({
     fontFamily: 'outfit-medium',
   },
   infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
     padding: Spacing.md,
   },
   title: {

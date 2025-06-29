@@ -1,5 +1,5 @@
 // services/WorkoutService.js
-import { collection, getDocs, doc, updateDoc, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, writeBatch, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
 import { db } from '../config/FirebaseConfig';
 
 
@@ -196,6 +196,104 @@ searchWorkouts: async (searchTerm) => {
       return true;
     } catch (error) {
       console.error(`Error updating workout exercises for ${workoutId}:`, error);
+      return false;
+    }
+  },
+
+
+  /**
+   * Delete a workout by ID and clean up related data
+   * 
+   * @param {string} workoutId - ID of the workout to delete
+   * @param {string} userEmail - Email of the user (for security)
+   * @returns {Promise<boolean>} Success status
+   */
+  deleteWorkout: async (workoutId, userEmail) => {
+    try {
+      // Find and delete the workout document
+      const workoutQuery = query(
+        collection(db, 'Routines'), 
+        where('id', '==', workoutId),
+        where('user.email', '==', userEmail)
+      );
+      const workoutSnapshot = await getDocs(workoutQuery);
+      
+      if (workoutSnapshot.empty) {
+        console.log("Workout not found or not owned by user");
+        return false;
+      }
+      
+      // Delete the workout document
+      await deleteDoc(workoutSnapshot.docs[0].ref);
+      
+      // Remove from user's favorites if it exists
+      const favoritesDocRef = doc(db, 'Favorites', userEmail);
+      const favoritesDoc = await getDoc(favoritesDocRef);
+      
+      if (favoritesDoc.exists()) {
+        const currentFavorites = favoritesDoc.data().favorites || [];
+        const updatedFavorites = currentFavorites.filter(id => id !== workoutId);
+        
+        if (currentFavorites.length !== updatedFavorites.length) {
+          await updateDoc(favoritesDocRef, { favorites: updatedFavorites });
+        }
+      }
+
+      const WorkoutSessionService = await import('./WorkoutSessionService');
+      await WorkoutSessionService.default.deleteSession(workoutId);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting workout ${workoutId}:`, error);
+      return false;
+    }
+  },
+
+
+  /**
+   * Delete a category and handle workouts in that category
+   * 
+   * @param {string} categoryName - Name of the category to delete
+   * @param {string} userEmail - Email of the user (for security)
+   * @param {string} reassignCategory - Category to reassign workouts to
+   * @returns {Promise<boolean>} Success status
+   */
+  deleteCategory: async (categoryName, userEmail, reassignCategory = 'Uncategorized') => {
+    try {
+      // Find category document
+      const categoryQuery = query(
+        collection(db, 'Category'),
+        where('name', '==', categoryName),
+        where('userEmail', '==', userEmail)
+      );
+      const categorySnapshot = await getDocs(categoryQuery);
+      
+      if (categorySnapshot.empty) {
+        console.log("Category not found or not owned by user");
+        return false;
+      }
+      
+      // Update all workouts in this category
+      const workoutsQuery = query(
+        collection(db, 'Routines'),
+        where('category', '==', categoryName),
+        where('user.email', '==', userEmail)
+      );
+      const workoutsSnapshot = await getDocs(workoutsQuery);
+      
+      // Batch update workouts to new category
+      const batch = writeBatch(db);
+      workoutsSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, { category: reassignCategory });
+      });
+      await batch.commit();
+      
+      // Delete the category document
+      await deleteDoc(categorySnapshot.docs[0].ref);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting category ${categoryName}:`, error);
       return false;
     }
   }

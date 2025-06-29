@@ -15,7 +15,7 @@ import { useOAuth } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { Typography, Shadows } from '../../constants/Colors';
+import { Typography } from '../../constants/Colors';
 import AuthButton from '../../components/Auth/AuthButton';
 import AppLogo from '../../components/Auth/AppLogo';
 import { useLoginAnimations } from '../../hooks/useLoginAnimations';

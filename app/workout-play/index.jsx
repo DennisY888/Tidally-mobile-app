@@ -1,12 +1,10 @@
 // app/workout-play/index.jsx
 import React, { useRef, useEffect } from 'react';
 import { 
-  View,
   StyleSheet, 
   FlatList, 
   StatusBar,
-  BackHandler,
-  Platform
+  BackHandler
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,7 +16,6 @@ import ExerciseInstructions from '../../components/WorkoutPlay/ExerciseInstructi
 import ExerciseItem from '../../components/WorkoutPlay/ExerciseItem';
 import CompletionBar from '../../components/WorkoutPlay/CompletionBar';
 import { useWorkoutPlayback } from '../../hooks/useWorkoutPlayback';
-import WorkoutSessionService from '../../services/WorkoutSessionService';
 
 /**
  * Workout Play Screen

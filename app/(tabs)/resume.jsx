@@ -8,15 +8,19 @@ import {
   TouchableOpacity, 
   Image,
   RefreshControl,
-  Platform
+  Alert,
+
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
 import WorkoutSessionService from '../../services/WorkoutSessionService';
+import { WorkoutService } from '../../services/WorkoutService';
+
 
 export default function Resume() {
   const { colors, isDark } = useTheme();
@@ -33,6 +37,27 @@ const loadSessions = useCallback(async () => {
   try {
     setRefreshing(true);
     const sessions = await WorkoutSessionService.getSavedSessions();
+
+    const validatedSessions = await Promise.all(
+      sessions.map(async (session) => {
+        try {
+          // Check if workout still exists in Firestore
+          const workout = await WorkoutService.getWorkoutById(session.workoutId);
+          
+          if (!workout) {
+            // Workout was deleted, mark session as orphaned
+            console.log(`Orphaned session found for deleted workout: ${session.workoutId}`);
+            return { ...session, isOrphaned: true };
+          }
+          
+          // Workout exists, session is valid
+          return { ...session, isOrphaned: false };
+        } catch (error) {
+          console.error(`Error validating session ${session.workoutId}:`, error);
+          return { ...session, isOrphaned: true };
+        }
+      })
+    );
     
     // Process the sessions to ensure all required fields exist
     const processedSessions = sessions.map(session => ({
@@ -42,7 +67,8 @@ const loadSessions = useCallback(async () => {
       exercises: Array.isArray(session.exercises) ? session.exercises : [],
       progress: typeof session.progress === 'number' ? session.progress : 0,
       elapsedTime: typeof session.elapsedTime === 'number' ? session.elapsedTime : 0,
-      lastAccessedAt: session.lastAccessedAt || new Date().toISOString()
+      lastAccessedAt: session.lastAccessedAt || new Date().toISOString(),
+      isOrphaned: session.isOrphaned || false
     }));
     
     // Sort by most recent first
@@ -136,6 +162,36 @@ const loadSessions = useCallback(async () => {
       console.error("Error resuming workout:", error);
     }
   };
+
+
+  const handleOrphanedSession = useCallback((session) => {
+    Alert.alert(
+      "Workout No Longer Available",
+      `"${session.workoutTitle}" has been deleted and cannot be resumed.\n\nWould you like to remove this session?`,
+      [
+        { text: "Keep Session", style: "cancel" },
+        { 
+          text: "Remove", 
+          style: "destructive",
+          onPress: () => handleCleanupOrphanedSession(session)
+        }
+      ]
+    );
+  }, []);
+  
+
+  const handleCleanupOrphanedSession = useCallback(async (session) => {
+    try {
+      await WorkoutSessionService.deleteSession(session.workoutId);
+      // Refresh the sessions list
+      loadSessions();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error("Error cleaning up orphaned session:", error);
+      Alert.alert("Error", "Failed to remove session. Please try again.");
+    }
+  }, [loadSessions]);
+
   
   // Render a session item
   const renderSessionItem = ({ item }) => {
@@ -143,11 +199,13 @@ const loadSessions = useCallback(async () => {
     const progressColor = progress < 30 ? colors.error : 
                           progress < 70 ? colors.warning : 
                           colors.success;
+    const isOrphaned = item.isOrphaned;
     
     return (
       <TouchableOpacity
-        style={[styles.sessionCard, { backgroundColor: colors.background }]}
-        onPress={() => handleResumeWorkout(item)}
+        style={[styles.sessionCard, { backgroundColor: colors.background }, isOrphaned && styles.orphanedCard]}
+        onPress={() => isOrphaned ? handleOrphanedSession(item) : handleResumeWorkout(item)}
+        disabled={isOrphaned}
       >
         <View style={styles.sessionHeader}>
         <Image 
@@ -155,16 +213,24 @@ const loadSessions = useCallback(async () => {
             uri: item.workoutImageUrl || undefined
           }}
           defaultSource={require('../../assets/images/exercise_icon.png')} // Update path as needed
-          style={styles.workoutImage}
+          style={[styles.workoutImage, isOrphaned && styles.orphanedImage]}
           onError={(e) => {
             console.log(`Image load error for workout: ${item.workoutTitle}`);
           }}
         />
           
           <View style={styles.sessionInfo}>
-            <Text style={[styles.workoutTitle, { color: colors.text }]}>
-              {item.workoutTitle}
-            </Text>
+            <View style={styles.titleContainer}>
+              <Text style={[styles.workoutTitle, { color: isOrphaned ? colors.textTertiary : colors.text }]}>
+                {item.workoutTitle}
+              </Text>
+              {isOrphaned && (
+                <View style={[styles.orphanedBadge, { backgroundColor: colors.error }]}>
+                  <Ionicons name="warning" size={12} color="#fff" />
+                  <Text style={styles.orphanedBadgeText}>Deleted</Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.sessionDate, { color: colors.textSecondary }]}>
               Last played {new Date(item.lastAccessedAt).toLocaleDateString()}
             </Text>
@@ -184,7 +250,7 @@ const loadSessions = useCallback(async () => {
               <View 
                 style={[
                   styles.progressFill, 
-                  { width: `${progress}%`, backgroundColor: progressColor }
+                  { width: `${progress}%`, backgroundColor: isOrphaned ? colors.textTertiary : progressColor }
                 ]} 
               />
             </View>
@@ -193,6 +259,16 @@ const loadSessions = useCallback(async () => {
             </Text>
           </View>
         </View>
+
+        {isOrphaned && (
+          <TouchableOpacity 
+            style={[styles.cleanupButton, { backgroundColor: colors.error }]}
+            onPress={() => handleCleanupOrphanedSession(item)}
+          >
+            <Ionicons name="trash" size={16} color="#fff" />
+            <Text style={styles.cleanupButtonText}>Remove</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };
@@ -316,5 +392,48 @@ const styles = StyleSheet.create({
   emptySubtext: {
     ...Typography.subhead,
     textAlign: 'center',
+  },
+  orphanedCard: {
+    opacity: 0.6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  orphanedImage: {
+    opacity: 0.4,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  orphanedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    marginLeft: 8,
+  },
+  orphanedBadgeText: {
+    ...Typography.caption2,
+    color: '#fff',
+    marginLeft: 2,
+    fontFamily: 'outfit-medium',
+  },
+  cleanupButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  cleanupButtonText: {
+    ...Typography.caption2,
+    color: '#fff',
+    marginLeft: 4,
+    fontFamily: 'outfit-medium',
   },
 });

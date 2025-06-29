@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+// app/(tabs)/home.jsx
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
-  RefreshControl,
   Platform,
   ActivityIndicator,
   SafeAreaView,
@@ -24,6 +25,9 @@ import Folder from '../../components/Home/Folder';
 import { WorkoutService } from '../../services/WorkoutService';
 import HighlightedText from '../../components/UI/HighlightedText';
 import { useWorkouts } from '../../hooks/useWorkouts';
+import Workout from '../../components/Home/Workout'; 
+import { useActiveWorkout } from '../../context/WorkoutDetailContext'; 
+
 
 /**
  * Home Screen
@@ -48,6 +52,8 @@ export default function Home() {
   const styles = getStyles(colors, isDark); // Create theme-aware styles
   const navigation = useNavigation();
   const { workouts, loading } = useWorkouts(selectedCategory);
+
+  const { setActiveWorkout } = useActiveWorkout();
 
 
   // Helper function to determine search match context
@@ -101,13 +107,64 @@ export default function Home() {
     router.push('/add-new-workout');
   };
 
+  
+  const renderSearchResultItem = ({ item: workout }) => {
+    const matchContext = getMatchContext(workout, searchTerm);
+
+    const navigateToDetails = () => {
+      setActiveWorkout(workout); 
+      router.push('/workout-details/' + workout.id);
+    };
+
+    return (
+      <TouchableOpacity
+        style={styles.workoutItem}
+        onPress={navigateToDetails}
+      >
+        <Image
+          source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
+          style={styles.workoutImage}
+          resizeMode="cover"
+        />
+        <View style={styles.workoutDetails}>
+          <HighlightedText
+            text={workout.title}
+            highlight={searchTerm}
+            style={styles.workoutTitle}
+          />
+          {matchContext ? (
+            <View style={styles.matchContextContainer}>
+              <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
+              <Text style={styles.matchContextText} numberOfLines={1}>
+                Matches: <HighlightedText text={matchContext} highlight={searchTerm} style={{ fontFamily: 'outfit-medium' }}/>
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.workoutSubtitle} numberOfLines={1}>{workout.category}</Text>
+          )}
+          <Text style={styles.workoutMeta}>
+            {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Tidally</Text>
+      <View style={styles.headerTop}>
+        <Text style={styles.headerTitle}>Tidally</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push('/stopwatch')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="stopwatch-outline" size={28} color={colors.primary} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.profileButton}
             onPress={() => router.push('/profile')}
@@ -123,6 +180,7 @@ export default function Home() {
             )}
           </TouchableOpacity>
         </View>
+      </View>
         <TextInput
           style={styles.searchInput}
           placeholder="Search workouts or exercises..."
@@ -135,166 +193,68 @@ export default function Home() {
       </View>
 
       {/* Main Content Area */}
-        <View style={{ flex: 1 }}>
-          <ScrollView
-            style={styles.contentContainer}
-            contentInset={{ bottom: 80 }}
-            scrollIndicatorInsets={{ bottom: 80 }}
-            contentContainerStyle={{ paddingBottom: Platform.OS === 'android' ? 90 : 0 }}
-          >
-            {isSearching ? (
-              // Search UI
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Search Results</Text>
-                {isSearchLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                  </View>
-                ) : searchResults.length > 0 ? (
-                  <View style={styles.listContent}>
-                    {searchResults.map((workout) => {
-                      const matchContext = getMatchContext(workout, searchTerm);
-                      return (
-                        <TouchableOpacity
-                          key={workout.id}
-                          style={styles.workoutItem}
-                          onPress={() => router.push({
-                            pathname: '/workout-details',
-                            params: {
-                              id: workout.id,
-                              title: workout.title,
-                              imageUrl: workout.imageUrl,
-                              category: workout.category,
-                              description: workout.description || "",
-                              est_time: workout.est_time || "0",
-                              exercises: JSON.stringify(workout.exercises || []),
-                              user: JSON.stringify(workout.user || {})
-                            }
-                          })}
-                        >
-                          <Image
-                            source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
-                            style={styles.workoutImage}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.workoutDetails}>
-                            <HighlightedText
-                              text={workout.title}
-                              highlight={searchTerm}
-                              style={styles.workoutTitle}
-                            />
-                            {matchContext ? (
-                              <View style={styles.matchContextContainer}>
-                                <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
-                                <Text style={styles.matchContextText} numberOfLines={1}>
-                                  Matches: <HighlightedText
-                                                    text={matchContext}
-                                                    highlight={searchTerm}
-                                                    style={{ fontFamily: 'outfit-medium' }}
-                                                  />
-                                </Text>
-                              </View>
-                            ) : (
-                              <Text style={styles.workoutSubtitle} numberOfLines={1}>{workout.category}</Text>
-                            )}
-                            <Text style={styles.workoutMeta}>
-                              {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      )
-                    })}
-                  </View>
-                ) : (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
-                      No workouts found for "{searchTerm}"
-                    </Text>
-                    <Text style={styles.emptySubtext}>
-                      Try a different keyword or check spelling.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ) : (
-              // Normal Home Page UI
-              <>
-                <Folder
-                  category={(value) => {
-                    setSelectedCategory(value);
-                  }}
-                  selectedCategory={selectedCategory}
-                  user={user}
-                />
-                {loading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                  </View>
-                ) : workouts.length > 0 ? (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{selectedCategory || 'Your Workouts'}</Text>
-                    <View style={styles.listContent}>
-                      {workouts.map((workout) => (
-                        <TouchableOpacity
-                          key={workout._id} // Using the correct unique key from the hook
-                          style={styles.workoutItem}
-                          onPress={() => router.push({
-                            // This part will be refactored in our next step to fix navigation
-                            pathname: '/workout-details',
-                            params: {
-                              id: workout.id,
-                              title: workout.title,
-                              imageUrl: workout.imageUrl,
-                              category: workout.category,
-                              description: workout.description || "",
-                              est_time: workout.est_time || "0",
-                              exercises: JSON.stringify(workout.exercises || []),
-                              user: JSON.stringify(workout.user || {})
-                            }
-                          })}
-                        >
-                          <Image
-                            source={{ uri: workout.imageUrl || 'https://via.placeholder.com/150' }}
-                            style={styles.workoutImage}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.workoutDetails}>
-                            <Text style={styles.workoutTitle}>{workout.title}</Text>
-                            <Text style={styles.workoutSubtitle}>{workout.category}</Text>
-                            <Text style={styles.workoutMeta}>
-                              {workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
-                      No workouts found
-                    </Text>
-                    <Text style={styles.emptySubtext}>
-                      Create your first workout to see it here!
-                    </Text>
-                  </View>
-                )}
-              </>
-            )}
-          </ScrollView>
+      <FlatList
+        data={isSearching ? searchResults : workouts}
+        renderItem={({ item }) => {
+          if (isSearching) {
+            return renderSearchResultItem({ item });
+          } else {
+            return <Workout workout={item} layout='row' />;
+          }
+        }}
+        keyExtractor={(item) => item._id || item.id}
+        contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 120 }}
+        ListHeaderComponent={
+          isSearching ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Search Results</Text>
+            </View>
+          ) : (
+            <>
+              <Folder
+                category={(value) => {
+                  setSelectedCategory(value);
+                }}
+                selectedCategory={selectedCategory}
+                user={user}
+              />
+              {workouts.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>{selectedCategory || 'Your Workouts'}</Text>
+                </View>
+              )}
+            </>
+          )
+        }
+        ListEmptyComponent={
+          (isSearching && isSearchLoading) || (!isSearching && loading) ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {isSearching ? `No workouts found for "${searchTerm}"` : 'No workouts found'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {isSearching ? 'Try a different keyword or check spelling.' : 'Create your first workout to see it here!'}
+              </Text>
+            </View>
+          )
+        }
+      />
 
-          {/* Floating Action Button */}
-          <View style={[styles.bottomBar, { borderTopColor: colors.divider }]}>
-            <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: colors.primary }]}
-              onPress={navigateToAddWorkout}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-              <Text style={styles.createButtonText}>Create a Workout</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      {/* Floating Action Button - Now sits outside the list, but layered correctly by SafeAreaView */}
+      <View style={[styles.bottomBar, { borderTopColor: colors.divider }]}>
+        <TouchableOpacity
+          style={[styles.createButton, { backgroundColor: colors.primary }]}
+          onPress={navigateToAddWorkout}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+          <Text style={styles.createButtonText}>Create a Workout</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -458,5 +418,20 @@ const getStyles = (colors, isDark) => StyleSheet.create({
     ...Typography.headline,
     color: '#fff',
     marginLeft: Spacing.sm,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
 });
