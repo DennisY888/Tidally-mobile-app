@@ -32,30 +32,16 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
   // Load session data if resuming, otherwise initialize fresh session
   useEffect(() => {
     const initializeSession = async () => {
-      console.log("----------------------------------------");
-      console.log("INITIALIZE SESSION START");
-      console.log("Workout ID:", workout.id);
-      console.log("Workout Title:", workout.title);
-      console.log("Is Resuming:", isResuming);
-      console.log("Exercises from params count:", workout.exercises ? workout.exercises.length : 0);
-      
       if (isResuming) {
-        console.log("RESUMING WORKFLOW STARTED");
-        
         // First, check if we have valid exercises in the params
         if (workout.exercises && workout.exercises.length > 0) {
-          console.log("✅ Valid exercises found in route params:", workout.exercises.length);
-          console.log("First exercise from params:", JSON.stringify(workout.exercises[0], null, 2));
-          
           // Transform workout exercises to session exercises with tracking properties if needed
           const resumeExercises = workout.exercises.map(exercise => {
             // If exercise already has session properties, use them
             if ('remainingSets' in exercise && 'completedSets' in exercise) {
-              console.log("Exercise already has session properties:", exercise.name);
               return exercise;
             }
             // Otherwise, add session properties
-            console.log("Adding session properties to exercise:", exercise.name);
             return {
               ...exercise,
               remainingSets: exercise.sets || 0,
@@ -64,9 +50,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
               isPaused: false
             };
           });
-          
-          console.log("Setting session exercises from params. Count:", resumeExercises.length);
-          console.log("First processed exercise:", JSON.stringify(resumeExercises[0], null, 2));
           
           // Ensure progress is a number
           const progressValue = parseFloat(workout.progress) || 0;

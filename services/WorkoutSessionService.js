@@ -32,7 +32,6 @@ const WorkoutSessionService = {
    * @returns {Promise<boolean>} Whether save was successful
    */
   saveSession: async (session) => {
-    console.log("Saving session data:", JSON.stringify(session, null, 2));
     try {
       // Get current sessions
       let sessions = await WorkoutSessionService.getSavedSessions();

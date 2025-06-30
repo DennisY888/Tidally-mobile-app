@@ -57,6 +57,7 @@ const SettingsOption = ({
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',

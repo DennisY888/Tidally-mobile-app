@@ -1,4 +1,4 @@
-// hooks/useFavorites.js
+// hooks/useFavorites.jsx
 
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
