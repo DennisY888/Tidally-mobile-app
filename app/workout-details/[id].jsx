@@ -306,6 +306,7 @@ export default function WorkoutDetails() {
    * @param {number} index - The index of the exercise
    */
   const handleExerciseOptions = (exercise, index) => {
+    console.log("🔍 handleExerciseOptions called with index:", index, "exercise:", exercise.name);
     setSelectedExerciseIndex(index); // Set the index for use by other functions.
     bottomSheetRef.current?.present(exercise, index);
   };
@@ -318,6 +319,7 @@ export default function WorkoutDetails() {
    * @param {number} index - The index of the exercise.
    */
   const handleEdit = (exercise, index) => {
+    console.log("🔍 handleEdit called with index:", index);
     // This logic is moved directly from the old Alert's onPress callback.
     setSelectedExerciseIndex(index);
     setSelectedExercise({...exercise});
@@ -445,9 +447,11 @@ export default function WorkoutDetails() {
             visible={isEditModalVisible}
             onClose={() => setIsEditModalVisible(false)}
             exercise={selectedExercise}
-            onSave={(editedExercise) => {
-              saveEditedExercise(editedExercise);
-              // Don't close modal here - it will be closed by saveEditedExercise
+            onSave={async (editedExercise) => {
+              const success = await saveEditedExercise(editedExercise);
+              if (success) {
+                setIsEditModalVisible(false); // ✅ Close modal on success
+              }
             }}
           />
           )}

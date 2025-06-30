@@ -17,7 +17,8 @@ const WorkoutSessionService = {
     try {
       const sessionData = await AsyncStorage.getItem(STORAGE_KEY);
       if (sessionData) {
-        return JSON.parse(sessionData);
+        const parsed = JSON.parse(sessionData);
+        return parsed;
       }
       return [];
     } catch (error) {
@@ -32,6 +33,11 @@ const WorkoutSessionService = {
    * @returns {Promise<boolean>} Whether save was successful
    */
   saveSession: async (session) => {
+    console.log("🔍 Saving session - Image URL BEFORE storage:", {
+      originalUrl: session.workoutImageUrl,
+      hasEncoding: session.workoutImageUrl?.includes('%2F'),
+      urlSubstring: session.workoutImageUrl?.substring(50, 150)
+    });
     try {
       // Get current sessions
       let sessions = await WorkoutSessionService.getSavedSessions();
@@ -50,6 +56,17 @@ const WorkoutSessionService = {
       }
       // Save to storage
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+
+      const verifyData = await AsyncStorage.getItem(STORAGE_KEY);
+      const parsed = JSON.parse(verifyData);
+      const savedUrl = parsed.find(s => s.workoutId === session.workoutId)?.workoutImageUrl;
+      
+      console.log("🔍 URL after AsyncStorage save/load:", {
+        savedUrl: savedUrl?.substring(50, 150),
+        hasEncoding: savedUrl?.includes('%2F'),
+        urlsMatch: session.workoutImageUrl === savedUrl
+      });
+
       return true;
     } catch (error) {
       console.error('Error saving workout session:', error);

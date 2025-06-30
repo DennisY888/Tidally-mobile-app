@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { collection, doc, getDocs, setDoc, serverTimestamp, addDoc, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useUser } from '@clerk/clerk-expo';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { db, storage } from '../../config/FirebaseConfig';
@@ -211,7 +212,16 @@ export default function AddNewWorkout() {
   const uploadImage = async() => {
     setLoader(true);
     try {
-      const resp = await fetch(image);
+      const compressedImage = await manipulateAsync(
+        image,
+        [{ resize: { width: 1024 } }], // Resize to max 1024px width
+        { 
+          compress: 0.8, // 80% quality
+          format: SaveFormat.JPEG 
+        }
+      );
+      
+      const resp = await fetch(compressedImage.uri);
       const blobImage = await resp.blob();
       const storageRef = ref(storage, '/Tidally/' + Date.now() + '.jpg');
       

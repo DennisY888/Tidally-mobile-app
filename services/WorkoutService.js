@@ -74,22 +74,17 @@ export const WorkoutService = {
    */
   getWorkoutById: async (workoutId) => {
     try {
-      const q = query(
-        collection(db, 'Routines'),
-        where('id', '==', workoutId),
-        limit(1)
-      );
+      const docRef = doc(db, 'Routines', workoutId);
+      const docSnap = await getDoc(docRef);
       
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
+      if (!docSnap.exists()) {
         return null;
       }
       
       return {
-        ...snapshot.docs[0].data(),
-        _id: snapshot.docs[0].id,
-        _ref: snapshot.docs[0].ref
+        ...docSnap.data(),
+        _id: docSnap.id,
+        _ref: docSnap.ref
       };
     } catch (error) {
       console.error(`Error fetching workout ${workoutId}:`, error);
@@ -99,8 +94,6 @@ export const WorkoutService = {
 
 
 getAllDocuments: async () => {
-  console.log("========== DIAGNOSTIC: WorkoutService.getAllDocuments ==========");
-  
   try {
     // Get all documents
     const snapshot = await getDocs(collection(db, 'Routines'));

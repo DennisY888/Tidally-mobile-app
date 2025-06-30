@@ -4,6 +4,7 @@ import { Share, Platform, Alert, ToastAndroid } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { collection, doc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
+import { showToast } from '../utils/helpers';
 
 import { db } from '../config/FirebaseConfig';
 
@@ -83,13 +84,14 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
    * @param {number} index - The index of the exercise to update
    */
   const saveEditedExercise = async (editedExercise) => {
+    console.log("🔍 saveEditedExercise called, selectedExerciseIndex:", selectedExerciseIndex);
     try {
       // Validate the index
       if (selectedExerciseIndex === undefined || selectedExerciseIndex === null || 
           selectedExerciseIndex < 0 || selectedExerciseIndex >= workoutExercises.length) {
-        console.error("Invalid exercise index:", selectedExerciseIndex);
-        Alert.alert("Error", "Could not identify which exercise to update");
-        return;
+          console.error("Invalid exercise index:", selectedExerciseIndex);
+          showToast("Could not identify which exercise to update");
+          return false;
       }
       
       // Create a deep copy of the exercises array
@@ -101,27 +103,21 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
         ...editedExercise,
       };
       
-      // Update local state FIRST
+      const docRef = doc(db, 'Routines', workout.id);
+      await updateDoc(docRef, {
+        exercises: updatedExercises
+      });
+      
+      // ✅ ONLY UPDATE LOCAL STATE AFTER SUCCESS
       setWorkoutExercises(updatedExercises);
       
-      // Then update Firestore
-      const q = query(collection(db, 'Routines'), where('id', '==', workout.id));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const docRef = doc(db, 'Routines', querySnapshot.docs[0].id);
-        await updateDoc(docRef, {
-          exercises: updatedExercises
-        });
-        
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("Success", "Exercise updated successfully");
-      } else {
-        throw new Error("Workout document not found");
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast("Exercise updated successfully");
+      return true; // ✅ RETURN SUCCESS INDICATOR
     } catch (error) {
       console.error("Error updating exercise:", error);
-      Alert.alert("Error", "Failed to update exercise: " + error.message);
+      showToast("Failed to update exercise");
+      return false
     }
   };
   

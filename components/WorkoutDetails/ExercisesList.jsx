@@ -73,7 +73,8 @@ const ExercisesList = ({
         keyExtractor={(item, index) => `exercise-${index}`}
         scrollEnabled={false}
         contentContainerStyle={{ paddingBottom: 40 }}
-        renderItem={({ item, drag, isActive, index }) => {
+        renderItem={({ item, drag, isActive, getIndex }) => {
+          const index = getIndex();
           // Ensure item has all required properties to prevent undefined text
           const name = item && item.name ? item.name : "Unnamed Exercise";
           const sets = item && item.sets ? item.sets : 0;

@@ -210,12 +210,18 @@ const loadSessions = useCallback(async () => {
         <View style={styles.sessionHeader}>
         <Image 
           source={{ 
-            uri: item.workoutImageUrl || undefined
+            uri: item.workoutImageUrl 
+              ? item.workoutImageUrl.replace(/\/Tidally\//g, '/Tidally%2F')
+              : undefined
           }}
-          defaultSource={require('../../assets/images/exercise_icon.png')} // Update path as needed
           style={[styles.workoutImage, isOrphaned && styles.orphanedImage]}
           onError={(e) => {
-            console.log(`Image load error for workout: ${item.workoutTitle}`);
+            console.log(`🔍 Image Error (after re-encoding):`, {
+              workoutTitle: item.workoutTitle,
+              originalUrl: item.workoutImageUrl,
+              encodedUrl: item.workoutImageUrl?.replace(/\/Tidally\//g, '/Tidally%2F'),
+              error: e.nativeEvent.error
+            });
           }}
         />
           

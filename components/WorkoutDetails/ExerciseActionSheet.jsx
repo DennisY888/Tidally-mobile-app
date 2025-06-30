@@ -14,6 +14,7 @@ const ExerciseActionSheet = forwardRef(({ onEdit, onDelete }, ref) => {
 
   useImperativeHandle(ref, () => ({
     present: (exercise, index) => {
+      console.log("🔍 Action sheet present called with index:", index);
       activeExerciseRef.current = { exercise, index };
       bottomSheetModalRef.current?.present();
     },

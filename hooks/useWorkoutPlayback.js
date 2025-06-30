@@ -71,8 +71,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
           console.log("Found saved session:", savedSession ? "YES" : "NO");
           
           if (savedSession && savedSession.exercises && savedSession.exercises.length > 0) {
-            console.log("✅ Resuming with saved session exercises. Count:", savedSession.exercises.length);
-            console.log("First exercise from saved session:", JSON.stringify(savedSession.exercises[0], null, 2));
             
             setSessionExercises(savedSession.exercises);
             setWorkoutProgress(savedSession.progress || 0);
@@ -90,23 +88,12 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
         console.log("FRESH SESSION: Not resuming, initializing fresh session");
         initializeFreshSession();
       }
-      
-      console.log("INITIALIZE SESSION COMPLETE");
-      console.log("----------------------------------------");
     };
 
 
     const initializeFreshSession = () => {
-      console.log("INITIALIZING FRESH SESSION");
-      console.log("Workout exercises raw:", workout.exercises ? "Found" : "Not found");
-      
       // Defensive check to ensure workout.exercises is an array
       const workoutExercises = Array.isArray(workout.exercises) ? workout.exercises : [];
-      console.log("Workout exercises count:", workoutExercises.length);
-      
-      if (workoutExercises.length === 0) {
-        console.warn("⚠️ WARNING: No exercises found in workout");
-      }
       
       // Transform workout exercises to session exercises with tracking properties
       const initialExercises = workoutExercises.map(exercise => ({
@@ -117,21 +104,14 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
         isPaused: false
       }));
       
-      console.log("Initial session exercises created. Count:", initialExercises.length);
-      if (initialExercises.length > 0) {
-        console.log("First initial exercise:", JSON.stringify(initialExercises[0], null, 2));
-      }
-      
       // Important: Set the state directly
       setSessionExercises(initialExercises);
-      console.log("State updated with initial exercises");
     
       setWorkoutProgress(0);
       setElapsedTime(0);
       setWorkoutComplete(false);
       progressAnim.setValue(0);
       
-      console.log("FRESH SESSION INITIALIZATION COMPLETE");
     };
 
     initializeSession();
