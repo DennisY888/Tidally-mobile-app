@@ -27,6 +27,7 @@ import HighlightedText from '../../components/UI/HighlightedText';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import Workout from '../../components/Home/Workout'; 
 import { useActiveWorkout } from '../../context/WorkoutDetailContext'; 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 /**
@@ -46,10 +47,11 @@ export default function Home() {
   const [isSearchLoading, setIsSearchLoading] = useState(false);
 
   // Hooks
+  const insets = useSafeAreaInsets();
   const { user } = useUser();
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const styles = getStyles(colors, isDark); // Create theme-aware styles
+  const styles = getStyles(colors, isDark, insets); // Create theme-aware styles
   const navigation = useNavigation();
   const { workouts, loading } = useWorkouts(selectedCategory);
 
@@ -259,8 +261,9 @@ export default function Home() {
   );
 }
 
+
 // Theme-aware Style Factory
-const getStyles = (colors, isDark) => StyleSheet.create({
+const getStyles = (colors, isDark, insets) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
@@ -268,8 +271,8 @@ const getStyles = (colors, isDark) => StyleSheet.create({
   header: {
     backgroundColor: colors.background,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
@@ -277,11 +280,13 @@ const getStyles = (colors, isDark) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   headerTitle: {
     ...Typography.title1,
     color: colors.text,
+    fontFamily: 'outfit-bold', 
+  letterSpacing: -0.5,
   },
   profileButton: {
     width: 44,
@@ -297,14 +302,16 @@ const getStyles = (colors, isDark) => StyleSheet.create({
     borderRadius: 20,
   },
   searchInput: {
-    height: 44,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.lg,
+    height: 52, 
+    borderWidth: 0, 
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.xl,
     backgroundColor: colors.backgroundSecondary,
-    color: colors.text,
-    ...Typography.body,
+    shadowColor: colors.shadow, 
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   contentContainer: {
     flex: 1,
@@ -403,7 +410,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
     right: 0,
     backgroundColor: colors.background,
     padding: Spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.md,
+    paddingBottom: Math.max(insets.bottom, Spacing.md),
     borderTopWidth: 1,
   },
   createButton: {

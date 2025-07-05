@@ -121,12 +121,8 @@ export default function Workout({ workout, layout = 'row' }) {
 
 
   const isRowLayout = layout === 'row';
-  const containerStyle = isRowLayout ? styles.rowContainer : styles.gridContainer;
-  const pressableStyle = isRowLayout ? styles.rowPressable : styles.gridPressable;
-  const imageContainerStyle = isRowLayout ? styles.rowImageContainer : styles.gridImageContainer;
-  const infoContainerStyle = isRowLayout ? styles.rowInfoContainer : styles.gridInfoContainer;
   
-
+  
   return (
     <Animated.View 
       style={[
@@ -139,10 +135,16 @@ export default function Workout({ workout, layout = 'row' }) {
         onPressOut={handlePressOut}
         onPress={navigateToWorkout}
         onLongPress={handleLongPress}
-        style={styles.pressable}
+        style={[
+          styles.pressable,
+          isRowLayout ? styles.rowLayout : styles.gridLayout
+        ]}
       >
         {/* Workout Image */}
-        <View style={styles.imageContainer}>
+        <View style={[
+          styles.imageContainer,
+          isRowLayout ? styles.rowImage : styles.gridImage
+        ]}>
           {workout?.imageUrl ? (
             <Image
               source={{ uri: workout?.imageUrl }}
@@ -171,8 +173,11 @@ export default function Workout({ workout, layout = 'row' }) {
         </View>
         
         {/* Workout Info */}
-        <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={1}>
+        <View style={[
+          styles.infoContainer,
+          isRowLayout ? styles.rowInfo : styles.gridInfo
+        ]}>
+          <Text style={styles.title} numberOfLines={isRowLayout ? 1 : 2}>
             {workout?.title || 'Unnamed Workout'}
           </Text>
           
@@ -308,5 +313,34 @@ const styles = StyleSheet.create({
     ...Typography.caption1,
     color: Colors.light.textTertiary,
     flex: 1,
+  },
+  rowLayout: {
+    flexDirection: 'row',
+  },
+  rowImage: {
+    height: 110,
+    width: 110,
+    borderTopLeftRadius: BorderRadius.lg,
+    borderBottomLeftRadius: BorderRadius.lg,
+  },
+  rowInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: Spacing.md,
+  },
+
+  // Grid layout styles (for Favorites page)
+  gridLayout: {
+    flexDirection: 'column',
+  },
+  gridImage: {
+    height: 120,
+    width: '100%',
+    borderTopLeftRadius: BorderRadius.lg,
+    borderTopRightRadius: BorderRadius.lg,
+  },
+  gridInfo: {
+    padding: Spacing.sm,
+    minHeight: 80,
   },
 });

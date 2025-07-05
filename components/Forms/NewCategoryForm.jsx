@@ -13,6 +13,7 @@ import FormField from './FormField';
 import ActionButton from '../UI/ActionButton';
 import { Spacing, BorderRadius, Typography, Colors } from '../../constants/Colors';
 import { showToast } from '../../utils/helpers';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 
 /**
@@ -63,9 +64,15 @@ export default function NewCategoryForm({ onCategoryCreated }) {
     setLoader(true);
 
     try {
-      // 2. Upload Image: Fetch the image data and upload it to Firebase Storage.
-      // The path is organized by user ID for security and easy management.
-      const resp = await fetch(image);
+      const compressedImage = await manipulateAsync(
+        image,
+        [{ resize: { width: 200 } }], // Small icons
+        { 
+          compress: 0.8,
+          format: SaveFormat.JPEG 
+        }
+      );
+      const resp = await fetch(compressedImage.uri);
       const blobImage = await resp.blob();
       const storageRef = ref(storage, `category-icons/${user.id}/${Date.now()}.jpg`);
       await uploadBytes(storageRef, blobImage);

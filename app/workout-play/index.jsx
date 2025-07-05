@@ -16,6 +16,7 @@ import ExerciseInstructions from '../../components/WorkoutPlay/ExerciseInstructi
 import ExerciseItem from '../../components/WorkoutPlay/ExerciseItem';
 import CompletionBar from '../../components/WorkoutPlay/CompletionBar';
 import { useWorkoutPlayback } from '../../hooks/useWorkoutPlayback';
+import * as Haptics from 'expo-haptics';
 
 /**
  * Workout Play Screen
@@ -90,6 +91,7 @@ export default function WorkoutPlay() {
    * @param {number} index - Index of the exercise in the list
    */
   const onExerciseSwipe = (exerciseName, index) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Play completion sound
     playSound(completeSound);
     

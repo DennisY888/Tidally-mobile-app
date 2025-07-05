@@ -90,9 +90,18 @@ const ExerciseItem = ({
           styles.exerciseCard,
           { backgroundColor: colors.background },
           isComplete && styles.completedCard,
-          isComplete && { 
+          isComplete && {
             backgroundColor: colors.backgroundSecondary,
-            borderColor: colors.divider 
+            borderColor: colors.divider
+          },
+          exercise.isTimerActive && {
+            borderWidth: 2,
+            borderColor: colors.primary,
+            backgroundColor: colors.primaryLight,
+            shadowColor: colors.primary,
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 8,
           }
         ]}>
           <View style={styles.exerciseHeader}>
@@ -158,7 +167,6 @@ const ExerciseItem = ({
               </TouchableOpacity>
             )}
           </View>
-          
           {isComplete && (
             <View style={[
               styles.completeBadge,
@@ -170,13 +178,15 @@ const ExerciseItem = ({
           )}
         </Animated.View>
       </Swipeable>
-      
+
       {exercise.isTimerActive && (
-        <CountdownTimer 
-          duration={exercise.time} 
-          onComplete={onSwipe}
-          isPaused={exercise.isPaused}
-        />
+        <View style={styles.timerOverlay}>
+          <CountdownTimer
+            duration={exercise.time}
+            onComplete={onSwipe}
+            isPaused={exercise.isPaused}
+          />
+        </View>
       )}
     </MotiView>
   );
@@ -252,12 +262,17 @@ const styles = StyleSheet.create({
     fontFamily: 'outfit-medium',
   },
   playButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   activePlayButton: {
     // Dynamic backgroundColor via props
@@ -277,6 +292,18 @@ const styles = StyleSheet.create({
     ...Typography.caption1,
     marginTop: 2,
   },
+  // timerOverlay: {
+  //   position: 'absolute',
+  //   top: 0,
+  //   left: 0,
+  //   right: 0,
+  //   bottom: 0,
+  //   backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   borderRadius: BorderRadius.lg,
+  //   zIndex: 20,
+  // },
 });
 
 export default ExerciseItem;

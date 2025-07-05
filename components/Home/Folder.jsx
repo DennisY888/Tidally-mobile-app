@@ -1,6 +1,6 @@
 // components/Home/Folder.jsx 
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useRef, useState, useCallback } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 import { db } from './../../config/FirebaseConfig';
@@ -21,6 +21,7 @@ export default function Folder({ category, user }) {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const scaleAnims = useRef(categoryList.map(() => new Animated.Value(1))).current;
   
   // useCallback memoizes the function to prevent unnecessary re-renders.
   const getCategories = useCallback(async () => {
@@ -84,6 +85,7 @@ export default function Folder({ category, user }) {
     );
   }, []);
   
+  
   const handleDeleteCategory = useCallback(async (item) => {
     Alert.alert(
       "Delete Folder",
@@ -123,44 +125,44 @@ export default function Folder({ category, user }) {
   const renderPremiumCategoryItem = (item, index) => {
     const isSelected = selectedCategory === item.name;
     return (
-      <TouchableOpacity
-        key={item.id || index}
-        style={styles.categoryCard}
-        onPress={() => handleCategorySelect(item)}
-        onLongPress={() => handleCategoryLongPress(item)}
-        activeOpacity={0.85}
-      >
-        <MotiView
-          animate={{ scale: isSelected ? 1.05 : 1 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          style={{flex: 1}}
+        <TouchableOpacity
+          key={item.id || index}
+          style={styles.categoryCard}
+          onPress={() => handleCategorySelect(item)}
+          onLongPress={() => handleCategoryLongPress(item)}
+          activeOpacity={0.85}
         >
-          <LinearGradient
-            colors={
-              isSelected
-                ? [Colors.light.primary, Colors.light.secondary]
-                : [Colors.light.background, Colors.light.backgroundSecondary]
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.cardGradient}
+          <MotiView
+            animate={{ scale: isSelected ? 1.05 : 1 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            style={{flex: 1}}
           >
-            <View style={styles.iconContainerLarge}>
-              {item?.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.categoryImageLarge} />
-              ) : (
-                <Ionicons name="folder" size={40} color={isSelected ? '#fff' : Colors.light.textSecondary} />
-              )}
-            </View>
-            <Text 
-              style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : Colors.light.text }]}
-              numberOfLines={2}
+            <LinearGradient
+              colors={
+                isSelected
+                  ? [Colors.light.primary, Colors.light.secondary]
+                  : [Colors.light.background, Colors.light.backgroundSecondary]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardGradient}
             >
-              {item?.name}
-            </Text>
-          </LinearGradient>
-        </MotiView>
-      </TouchableOpacity>
+              <View style={styles.iconContainerLarge}>
+                {item?.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.categoryImageLarge} />
+                ) : (
+                  <Ionicons name="folder" size={40} color={isSelected ? '#fff' : Colors.light.textSecondary} />
+                )}
+              </View>
+              <Text 
+                style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : Colors.light.text }]}
+                numberOfLines={2}
+              >
+                {item?.name}
+              </Text>
+            </LinearGradient>
+          </MotiView>
+        </TouchableOpacity>
     );
   };
   
@@ -247,6 +249,7 @@ const styles = StyleSheet.create({
       width: '33.333%',
       padding: Spacing.sm,
       aspectRatio: 1,
+      transform: [{ scale: 1 }],
     },
     cardGradient: {
       flex: 1,
