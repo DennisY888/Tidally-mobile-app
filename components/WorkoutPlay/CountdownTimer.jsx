@@ -5,83 +5,77 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { Spacing, BorderRadius } from '../../constants/Colors';
 
 const NUM_PARTICLES = 12;
 
 const ParticleEffect = ({ startAnimation }) => {
     const particles = [...Array(NUM_PARTICLES)].map(() => ({
-        animation: new Animated.Value(0),
-        angle: Math.random() * Math.PI * 2
+      animation: new Animated.Value(0),
+      angle: Math.random() * Math.PI * 2
     }));
-
+  
     useEffect(() => {
-        if (startAnimation) {
-            particles.forEach(particle => {
-                Animated.sequence([
-                    Animated.timing(particle.animation, {
-                        toValue: 1,
-                        duration: 1000,
-                        easing: Easing.out(Easing.cubic),
-                        useNativeDriver: true
-                    }),
-                    Animated.timing(particle.animation, {
-                        toValue: 0,
-                        duration: 300,
-                        useNativeDriver: true
-                    })
-                ]).start();
-            });
-        }
+      if (startAnimation) {
+        particles.forEach((particle, index) => {
+          Animated.sequence([
+            Animated.delay(index * 50), // Stagger the particles
+            Animated.timing(particle.animation, {
+              toValue: 1,
+              duration: 800,  // Slightly faster
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true
+            }),
+            Animated.timing(particle.animation, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true
+            })
+          ]).start();
+        });
+      }
     }, [startAnimation]);
-
+  
     return (
-        <>
-            {particles.map((particle, index) => {
-                const translateX = particle.animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, Math.cos(particle.angle) * 100]
-                });
-                const translateY = particle.animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, Math.sin(particle.angle) * 100]
-                });
-                const scale = particle.animation.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, 1, 0]
-                });
-                const rotate = particle.animation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', `${Math.random() * 360}deg`]
-                });
-
-                return (
-                    <Animated.View
-                        key={index}
-                        style={[
-                            styles.particle,
-                            {
-                                transform: [
-                                    { translateX },
-                                    { translateY },
-                                    { scale },
-                                    { rotate }
-                                ]
-                            }
-                        ]}
-                    >
-                        <MaterialCommunityIcons
-                            name={index % 2 === 0 ? "star" : "circle"}
-                            size={12}
-                            color={index % 3 === 0 ? Colors.light.primary : Colors.light.secondary}
-                        />
-                    </Animated.View>
-                );
-            })}
-        </>
+      <>
+        {particles.map((particle, index) => {
+          const translateX = particle.animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, Math.cos(particle.angle) * 60] // Smaller radius
+          });
+          const translateY = particle.animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, Math.sin(particle.angle) * 60] // Smaller radius
+          });
+          const scale = particle.animation.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: [0, 1, 0]
+          });
+  
+          return (
+            <Animated.View
+              key={index}
+              style={[
+                styles.particle,
+                {
+                  transform: [{ translateX }, { translateY }, { scale }]
+                }
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={index % 2 === 0 ? "star" : "circle"}
+                size={8}  // Smaller particles
+                color={index % 3 === 0 ? Colors.light.primary : Colors.light.secondary}
+              />
+            </Animated.View>
+          );
+        })}
+      </>
     );
-};
+  };
 
-export default function CountdownTimer({ duration, onComplete, isPaused }) {
+
+export default function CountdownTimer({ duration, onComplete, isPaused, isInline = false }) {
     const [timeLeft, setTimeLeft] = useState(duration);
     const rotateAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -241,6 +235,50 @@ export default function CountdownTimer({ duration, onComplete, isPaused }) {
 
     const progressColor = timeLeft <= 5 ? Colors.light.primary : Colors.light.secondary;
 
+
+    if (isInline) {
+        return (
+            <View style={styles.inlineContainer}>
+            <Animated.View style={[
+                styles.inlineTimerWrapper,
+                {
+                transform: [{ scale: pulseAnim }],
+                shadowColor: timeLeft <= 5 ? Colors.light.error : Colors.light.primary,
+                }
+            ]}>
+                <Text style={[
+                styles.inlineTimeText,
+                timeLeft <= 5 && styles.inlineTimeTextWarning
+                ]}>
+                {Math.ceil(timeLeft)}
+                </Text>
+                <Text style={styles.inlineSecondsText}>seconds</Text>
+                
+                {/* Minimal progress ring */}
+                <View style={styles.inlineProgressRing}>
+                <View 
+                    style={[
+                    styles.inlineProgressFill,
+                    {
+                        width: `${((duration - timeLeft) / duration) * 100}%`,
+                        backgroundColor: timeLeft <= 5 ? Colors.light.error : Colors.light.primary
+                    }
+                    ]}
+                />
+                </View>
+            </Animated.View>
+            
+            {/* Simplified particle effect only for completion */}
+            {showParticles && (
+                <View style={styles.inlineParticleContainer}>
+                <ParticleEffect startAnimation={showParticles} />
+                </View>
+            )}
+            </View>
+        );
+    }
+
+
     return (
         <View style={styles.containerOuter}>
             <Animated.View style={[
@@ -367,5 +405,68 @@ const styles = StyleSheet.create({
         height: 20,
         justifyContent: 'center',
         alignItems: 'center'
-    }
+    },
+    // Inline timer styles
+inlineContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    width: '100%',
+  },
+  inlineTimerWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.light.background,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: 32,
+    paddingVertical: 24,
+    borderWidth: 3,
+    borderColor: Colors.light.primary,
+    shadowColor: Colors.light.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
+    minWidth: 180,
+    position: 'relative',
+  },
+  inlineTimeText: {
+    fontSize: 72,           // LARGE, BOLD NUMBERS
+    fontFamily: 'outfit-bold',
+    color: Colors.light.primary,
+    lineHeight: 72,
+    textAlign: 'center',
+    letterSpacing: -2,      // Tighter spacing for better look
+  },
+  inlineTimeTextWarning: {
+    color: Colors.light.error,
+  },
+  inlineSecondsText: {
+    fontSize: 16,
+    fontFamily: 'outfit-medium',
+    color: Colors.light.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  inlineProgressRing: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    height: 4,
+    backgroundColor: Colors.light.backgroundSecondary,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  inlineProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  inlineParticleContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
 });

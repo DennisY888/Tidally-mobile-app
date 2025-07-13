@@ -92,6 +92,7 @@ export default function Stopwatch() {
   
     return () => pulse.stop();
   }, [isRunning, isPaused]);
+
   
   // Format time following existing pattern from WorkoutHeader
   const formatTime = useCallback((timeInSeconds) => {
@@ -100,6 +101,7 @@ export default function Stopwatch() {
     const centiseconds = Math.floor((timeInSeconds * 100) % 100);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
   }, []);
+
   
   // Start/Stop functionality
   const handleStartStop = useCallback(() => {

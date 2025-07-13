@@ -6,11 +6,13 @@ import { View, ActivityIndicator } from "react-native";
 import 'react-native-reanimated';
 import { useTheme } from "../context/ThemeContext";
 
+
 export default function Index() {
   const [isReady, setIsReady] = useState(false);
   const { user, isLoaded } = useUser();
   const { colors, isThemeLoaded } = useTheme();
 
+  
   // Simple delay to ensure app is fully loaded
   useEffect(() => {
     const timer = setTimeout(() => {

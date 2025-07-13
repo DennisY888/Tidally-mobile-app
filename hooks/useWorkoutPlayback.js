@@ -68,7 +68,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
           
           // Fallback to stored session if no exercises in params
           const savedSession = await WorkoutSessionService.getSessionByWorkoutId(workout.id);
-          console.log("Found saved session:", savedSession ? "YES" : "NO");
           
           if (savedSession && savedSession.exercises && savedSession.exercises.length > 0) {
             
@@ -85,7 +84,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
           }
         }
       } else {
-        console.log("FRESH SESSION: Not resuming, initializing fresh session");
         initializeFreshSession();
       }
     };
@@ -301,9 +299,12 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
             };
           }
         }
-        return ex;
+        else {
+          return { ...ex, isTimerActive: false, isPaused: false };
+        }
+
       })
-    );
+    )
   };
   
   /**

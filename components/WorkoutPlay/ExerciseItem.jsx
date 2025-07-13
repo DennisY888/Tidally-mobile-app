@@ -8,6 +8,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import CountdownTimer from './CountdownTimer';
 
+
 /**
  * Exercise item with swipe actions and timer
  * 
@@ -22,6 +23,10 @@ import CountdownTimer from './CountdownTimer';
 const ExerciseItem = ({ 
   exercise, 
   index, 
+  isCurrentExercise,
+  isActive = false,     
+  opacity = 1,         
+  scale = 1, 
   onSwipe, 
   onToggleTimer,
   swipeableRef 
@@ -32,6 +37,7 @@ const ExerciseItem = ({
   const progress = (exercise.completedSets / exercise.sets) * 100;
   const isComplete = exercise.remainingSets === 0;
   
+
   /**
    * Render right swipe action
    */
@@ -51,6 +57,7 @@ const ExerciseItem = ({
     );
   };
   
+
   /**
    * Render left swipe action
    */
@@ -70,11 +77,15 @@ const ExerciseItem = ({
     );
   };
   
+
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 20 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ delay: index * 100, type: 'timing' }}
+    <Animated.View 
+      style={[
+        { 
+          opacity,
+          transform: [{ scale }] 
+        }
+      ]}
     >
       <Swipeable
         ref={swipeableRef}
@@ -94,6 +105,12 @@ const ExerciseItem = ({
             backgroundColor: colors.backgroundSecondary,
             borderColor: colors.divider
           },
+          isCurrentExercise && styles.currentExerciseCard,
+          isCurrentExercise && {  
+            borderColor: colors.primary,
+            shadowColor: colors.primary,
+          },
+          exercise.isTimerActive && styles.activeTimerCard,
           exercise.isTimerActive && {
             borderWidth: 2,
             borderColor: colors.primary,
@@ -167,6 +184,7 @@ const ExerciseItem = ({
               </TouchableOpacity>
             )}
           </View>
+
           {isComplete && (
             <View style={[
               styles.completeBadge,
@@ -179,18 +197,20 @@ const ExerciseItem = ({
         </Animated.View>
       </Swipeable>
 
-      {exercise.isTimerActive && (
-        <View style={styles.timerOverlay}>
+      {exercise.isTimerActive && exercise.time && (
+        <View style={styles.inlineTimerContainer}>
           <CountdownTimer
             duration={exercise.time}
             onComplete={onSwipe}
             isPaused={exercise.isPaused}
+            isInline={true}
           />
         </View>
       )}
-    </MotiView>
+    </Animated.View>
   );
 };
+
 
 const styles = StyleSheet.create({
   exerciseCard: {
@@ -292,18 +312,25 @@ const styles = StyleSheet.create({
     ...Typography.caption1,
     marginTop: 2,
   },
-  // timerOverlay: {
-  //   position: 'absolute',
-  //   top: 0,
-  //   left: 0,
-  //   right: 0,
-  //   bottom: 0,
-  //   backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  //   borderRadius: BorderRadius.lg,
-  //   zIndex: 20,
-  // },
+  currentExerciseCard: {
+    borderWidth: 2,
+    transform: [{ scale: 1.02 }],
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  activeTimerCard: {
+    borderWidth: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  inlineTimerContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    borderTopWidth: 1,
+    marginTop: Spacing.md,
+  },
 });
 
 export default ExerciseItem;

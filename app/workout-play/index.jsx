@@ -1,15 +1,17 @@
 // app/workout-play/index.jsx
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { 
   StyleSheet, 
   FlatList, 
   StatusBar,
-  BackHandler
+  BackHandler,
+  View,
+  Text
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { Spacing } from '../../constants/Colors';
+import { Spacing, BorderRadius, Typography } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
 import WorkoutHeader from '../../components/WorkoutPlay/WorkoutHeader';
 import ExerciseInstructions from '../../components/WorkoutPlay/ExerciseInstructions';
@@ -17,6 +19,8 @@ import ExerciseItem from '../../components/WorkoutPlay/ExerciseItem';
 import CompletionBar from '../../components/WorkoutPlay/CompletionBar';
 import { useWorkoutPlayback } from '../../hooks/useWorkoutPlayback';
 import * as Haptics from 'expo-haptics';
+import CountdownTimer from '../../components/WorkoutPlay/CountdownTimer';
+
 
 /**
  * Workout Play Screen
@@ -32,12 +36,14 @@ export default function WorkoutPlay() {
     ...params,
     exercises: JSON.parse(params.exercises)
   };
+
   
   // Hooks
   const navigation = useNavigation();
   const router = useRouter();
   const { colors, isDark } = useTheme();
   
+
   // Custom hook for workout playback
   const {
     sessionExercises,
@@ -54,9 +60,13 @@ export default function WorkoutPlay() {
     saveSession
   } = useWorkoutPlayback(workout, isResuming);
   
+
   // Refs
   const swipeableRefs = useRef([]);
-  
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const flatListRef = useRef(null);
+
+
   // Setup navigation and handle back button
   useEffect(() => {
     navigation.setOptions({
@@ -73,7 +83,22 @@ export default function WorkoutPlay() {
       backHandler.remove();
     };
   }, []);
+
+
+  useEffect(() => {
+    const activeIndex = sessionExercises.findIndex(ex => ex.isTimerActive);
+    if (activeIndex !== -1 && flatListRef.current) {
+      setTimeout(() => {
+        flatListRef.current.scrollToIndex({
+          index: activeIndex,
+          animated: true,
+          viewPosition: 0.5, 
+        });
+      }, 300);
+    }
+  }, [sessionExercises]);
   
+
   /**
    * Save session and exit
    */
@@ -85,6 +110,7 @@ export default function WorkoutPlay() {
     router.back();
   };
   
+
   /**
    * Handle swipe action on exercise completion
    * @param {string} exerciseName - Name of the exercise
@@ -104,20 +130,49 @@ export default function WorkoutPlay() {
     }, 300);
   };
   
+
   /**
    * Render exercise item
    */
   const renderExerciseItem = ({ item, index }) => {
+    const isCurrentExercise = index === currentExerciseIndex;
+    const isActive = item.isTimerActive;
+    const activeIndex = sessionExercises.findIndex(ex => ex.isTimerActive);
+
+    let opacity = 1;
+    let scale = 1;
+    
+    if (activeIndex !== -1) {
+      if (index === activeIndex) {
+        opacity = 1;
+        scale = 1.05;
+      } else if (index === activeIndex + 1) {
+        opacity = 0.7;
+        scale = 1;
+      } else {
+        opacity = 0.5;
+        scale = 0.95;
+      }
+    }
+
     return (
       <ExerciseItem
         exercise={item}
         index={index}
+        isCurrentExercise={isCurrentExercise}
+        isActive={isActive}
+        opacity={opacity}
+        scale={scale}
         onSwipe={() => onExerciseSwipe(item.name, index)}
-        onToggleTimer={() => toggleTimer(item.name)}
+        onToggleTimer={() => {
+          setCurrentExerciseIndex(index);
+          toggleTimer(item.name);
+        }}
         swipeableRef={ref => swipeableRefs.current[index] = ref}
       />
     );
   };
+
   
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: isDark ? colors.backgroundSecondary : colors.backgroundSecondary }]}>
@@ -138,12 +193,56 @@ export default function WorkoutPlay() {
       
       {/* Exercise List */}
       <FlatList
+        ref={flatListRef}
         data={sessionExercises}
         renderItem={renderExerciseItem}
         keyExtractor={(item, index) => `exercise-${index}`}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        getItemLayout={(data, index) => ({
+          length: 120, 
+          offset: 120 * index,
+          index,
+        })}
       />
+
+      {/* TODO delete later */}
+      {/* Floating Timer Overlay */}
+      {/* {sessionExercises.some(ex => ex.isTimerActive) && (() => {
+        const activeExercise = sessionExercises.find(ex => ex.isTimerActive);
+        return (
+          <View style={styles.floatingTimerOverlay}>
+            <View style={[
+              {
+                backgroundColor: colors.background,
+                borderRadius: BorderRadius.xl,
+                padding: Spacing.xl,
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.3,
+                shadowRadius: 20,
+                elevation: 10,
+              }
+            ]}>
+              <Text style={[
+                {
+                  ...Typography.title2,
+                  marginBottom: Spacing.lg,
+                  textAlign: 'center',
+                }, 
+                { color: colors.text }]}>
+                {activeExercise.name}
+              </Text>
+              <CountdownTimer
+                duration={activeExercise.time}
+                onComplete={() => handleSetComplete(activeExercise.name)}
+                isPaused={activeExercise.isPaused}
+              />
+            </View>
+          </View>
+        );
+      })()} */}
       
       {/* Completion Bar */}
       {workoutComplete && <CompletionBar onFinish={handleExit} />}
@@ -159,4 +258,16 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: 100, // Space for bottom bar
   },
+  // TODO delete later
+  // floatingTimerOverlay: {
+  //   position: 'absolute',
+  //   top: 0,
+  //   left: 0,
+  //   right: 0,
+  //   bottom: 0,
+  //   backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   zIndex: 1000,
+  // },
 });
