@@ -28,6 +28,52 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const timerRef = useRef(null);
   const sessionExercisesRef = useRef([]);
+
+
+  // Enhanced timer state for full-screen timer management
+  const [showFullScreenTimer, setShowFullScreenTimer] = useState(false);
+  const [timerStartTime, setTimerStartTime] = useState(null);
+  const [timerElapsedSeconds, setTimerElapsedSeconds] = useState(0);
+
+  // Timer interval for active exercise countdown
+  useEffect(() => {
+    const activeExercise = sessionExercises.find(ex => ex.isTimerActive);
+    
+    if (activeExercise && !activeExercise.isPaused) {
+      if (!timerStartTime) {
+        setTimerStartTime(Date.now());
+      }
+      
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+        setTimerElapsedSeconds(elapsed);
+        
+        // Auto-complete when time runs out
+        if (elapsed >= activeExercise.time) {
+          handleSetComplete(activeExercise.name);
+          setTimerStartTime(null);
+          setTimerElapsedSeconds(0);
+        }
+      }, 100);
+      
+      return () => clearInterval(interval);
+    } else if (activeExercise && activeExercise.isPaused) {
+      // Timer is paused, maintain current elapsed time
+    } else {
+      // No active timer, reset timer state
+      setTimerStartTime(null);
+      setTimerElapsedSeconds(0);
+    }
+  }, [sessionExercises, timerStartTime]);
+
+  // Calculate remaining time for active exercise
+  const getActiveExerciseTimeLeft = () => {
+    const activeExercise = sessionExercises.find(ex => ex.isTimerActive);
+    if (!activeExercise) return 0;
+    
+    return Math.max(0, activeExercise.time - timerElapsedSeconds);
+  };
+
   
   // Load session data if resuming, otherwise initialize fresh session
   useEffect(() => {
@@ -341,6 +387,10 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
     playSound,
     completeSound,
     startSound,
-    saveSession  // New function to manually save session
+    saveSession,  // New function to manually save session
+    showFullScreenTimer,
+    setShowFullScreenTimer,
+    getActiveExerciseTimeLeft,
+    timerElapsedSeconds,
   };
 };
