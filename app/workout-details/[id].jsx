@@ -179,7 +179,6 @@ export default function WorkoutDetails() {
       
       // Delete any existing saved session for this workout
       const deleteResult = await WorkoutSessionService.deleteSession(workout.id);
-      console.log(`Previous session for workout ${workout.id} deleted: ${deleteResult}`);
       
       // Navigate to workout play screen
       router.push({

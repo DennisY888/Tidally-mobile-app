@@ -4,14 +4,12 @@ import {
   StyleSheet, 
   FlatList, 
   StatusBar,
-  BackHandler,
-  View,
-  Text
+  BackHandler
 } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { Spacing, BorderRadius, Typography } from '../../constants/Colors';
+import { Spacing } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
 import WorkoutHeader from '../../components/WorkoutPlay/WorkoutHeader';
 import ExerciseInstructions from '../../components/WorkoutPlay/ExerciseInstructions';
@@ -19,7 +17,6 @@ import ExerciseItem from '../../components/WorkoutPlay/ExerciseItem';
 import CompletionBar from '../../components/WorkoutPlay/CompletionBar';
 import { useWorkoutPlayback } from '../../hooks/useWorkoutPlayback';
 import * as Haptics from 'expo-haptics';
-import CountdownTimer from '../../components/WorkoutPlay/CountdownTimer';
 
 
 /**
@@ -206,43 +203,6 @@ export default function WorkoutPlay() {
         })}
       />
 
-      {/* TODO delete later */}
-      {/* Floating Timer Overlay */}
-      {/* {sessionExercises.some(ex => ex.isTimerActive) && (() => {
-        const activeExercise = sessionExercises.find(ex => ex.isTimerActive);
-        return (
-          <View style={styles.floatingTimerOverlay}>
-            <View style={[
-              {
-                backgroundColor: colors.background,
-                borderRadius: BorderRadius.xl,
-                padding: Spacing.xl,
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.3,
-                shadowRadius: 20,
-                elevation: 10,
-              }
-            ]}>
-              <Text style={[
-                {
-                  ...Typography.title2,
-                  marginBottom: Spacing.lg,
-                  textAlign: 'center',
-                }, 
-                { color: colors.text }]}>
-                {activeExercise.name}
-              </Text>
-              <CountdownTimer
-                duration={activeExercise.time}
-                onComplete={() => handleSetComplete(activeExercise.name)}
-                isPaused={activeExercise.isPaused}
-              />
-            </View>
-          </View>
-        );
-      })()} */}
       
       {/* Completion Bar */}
       {workoutComplete && <CompletionBar onFinish={handleExit} />}

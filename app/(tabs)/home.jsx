@@ -7,7 +7,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Platform,
   ActivityIndicator,
   SafeAreaView,
   TextInput,
