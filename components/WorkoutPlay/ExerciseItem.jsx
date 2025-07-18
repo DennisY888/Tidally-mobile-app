@@ -93,8 +93,10 @@ const ExerciseItem = ({
         renderLeftActions={renderLeftActions}
         onSwipeableLeftOpen={onSwipe}
         onSwipeableRightOpen={onSwipe}
-        friction={2}
-        overshootFriction={8}
+        friction={1.2}
+        overshootFriction={15}       
+        rightThreshold={90}        
+        leftThreshold={90}          
         enabled={!exercise.isTimerActive && exercise.remainingSets > 0}
       >
         <Animated.View style={[
@@ -112,13 +114,12 @@ const ExerciseItem = ({
           },
           exercise.isTimerActive && styles.activeTimerCard,
           exercise.isTimerActive && {
-            borderWidth: 2,
-            borderColor: colors.primary,
             backgroundColor: colors.primaryLight,
             shadowColor: colors.primary,
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 8,
+            shadowOpacity: 0.4,              
+            shadowRadius: 16,               
+            elevation: 12,                   
+            transform: [{ scale: 1.03 }],
           }
         ]}>
           <View style={styles.exerciseHeader}>
@@ -164,24 +165,41 @@ const ExerciseItem = ({
             </View>
             
             {exercise.time && exercise.remainingSets > 0 && (
-              <TouchableOpacity 
-                onPress={onToggleTimer}
-                style={[
-                  styles.playButton,
-                  { 
-                    backgroundColor: colors.backgroundSecondary,
-                    borderColor: colors.primary 
-                  },
-                  exercise.isTimerActive && !exercise.isPaused && styles.activePlayButton,
-                  exercise.isTimerActive && !exercise.isPaused && { backgroundColor: colors.primary }
-                ]}
+              <MotiView
+                animate={{
+                  scale: exercise.isTimerActive && !exercise.isPaused ? [1, 1.05, 1] : 1,
+                }}
+                transition={{
+                  type: 'timing',
+                  duration: 1000,
+                  loop: exercise.isTimerActive && !exercise.isPaused,
+                }}
               >
-                <Ionicons 
-                  name={exercise.isTimerActive ? (exercise.isPaused ? "play" : "pause") : "play"} 
-                  size={24} 
-                  color={exercise.isTimerActive && !exercise.isPaused ? "#fff" : colors.primary} 
-                />
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={onToggleTimer}
+                  style={[
+                    styles.playButton,
+                    { 
+                      backgroundColor: colors.backgroundSecondary,
+                      borderColor: colors.primary 
+                    },
+                    exercise.isTimerActive && !exercise.isPaused && styles.activePlayButton,
+                    exercise.isTimerActive && !exercise.isPaused && { 
+                      backgroundColor: colors.primary,
+                      shadowColor: colors.primary,
+                      shadowOpacity: 0.4,
+                      shadowRadius: 12,
+                      elevation: 12,
+                    }
+                  ]}
+                >
+                  <Ionicons 
+                    name={exercise.isTimerActive ? (exercise.isPaused ? "play" : "pause") : "play"} 
+                    size={24} 
+                    color={exercise.isTimerActive && !exercise.isPaused ? "#fff" : colors.primary} 
+                  />
+                </TouchableOpacity>
+              </MotiView>
             )}
           </View>
 
@@ -288,11 +306,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   activePlayButton: {
     // Dynamic backgroundColor via props
@@ -320,7 +333,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   activeTimerCard: {
-    borderWidth: 3,
+    borderWidth: 0,
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 10,
@@ -328,7 +341,6 @@ const styles = StyleSheet.create({
   inlineTimerContainer: {
     alignItems: 'center',
     paddingVertical: Spacing.lg,
-    borderTopWidth: 1,
     marginTop: Spacing.md,
   },
 });

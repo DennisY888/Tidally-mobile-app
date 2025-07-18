@@ -6,6 +6,7 @@ import { Colors } from '../../constants/Colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Spacing, BorderRadius } from '../../constants/Colors';
+import Svg, { Circle } from 'react-native-svg';
 
 const NUM_PARTICLES = 12;
 
@@ -250,7 +251,7 @@ export default function CountdownTimer({ duration, onComplete, isPaused, isInlin
                 styles.inlineTimeText,
                 timeLeft <= 5 && styles.inlineTimeTextWarning
                 ]}>
-                {Math.ceil(timeLeft)}
+                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                 </Text>
                 <Text style={styles.inlineSecondsText}>seconds</Text>
                 

@@ -17,6 +17,7 @@ import ExerciseItem from '../../components/WorkoutPlay/ExerciseItem';
 import CompletionBar from '../../components/WorkoutPlay/CompletionBar';
 import { useWorkoutPlayback } from '../../hooks/useWorkoutPlayback';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 
 
 /**
@@ -91,7 +92,7 @@ export default function WorkoutPlay() {
           animated: true,
           viewPosition: 0.5, 
         });
-      }, 300);
+      }, 100);
     }
   }, [sessionExercises]);
   
@@ -135,24 +136,27 @@ export default function WorkoutPlay() {
     const isCurrentExercise = index === currentExerciseIndex;
     const isActive = item.isTimerActive;
     const activeIndex = sessionExercises.findIndex(ex => ex.isTimerActive);
-
+  
     let opacity = 1;
     let scale = 1;
+    let shouldBlur = false;
     
     if (activeIndex !== -1) {
       if (index === activeIndex) {
         opacity = 1;
-        scale = 1.05;
+        scale = 1.08; // Slightly larger for more prominence
       } else if (index === activeIndex + 1) {
-        opacity = 0.7;
+        opacity = 0.8;
         scale = 1;
+        shouldBlur = true;
       } else {
-        opacity = 0.5;
-        scale = 0.95;
+        opacity = 0.6;
+        scale = 0.96;
+        shouldBlur = true;
       }
     }
-
-    return (
+  
+    const exerciseComponent = (
       <ExerciseItem
         exercise={item}
         index={index}
@@ -168,6 +172,17 @@ export default function WorkoutPlay() {
         swipeableRef={ref => swipeableRefs.current[index] = ref}
       />
     );
+  
+    // Wrap in blur if not active
+    if (shouldBlur) {
+      return (
+        <BlurView intensity={15} style={{ borderRadius: 16 }}>
+          {exerciseComponent}
+        </BlurView>
+      );
+    }
+  
+    return exerciseComponent;
   };
 
   
