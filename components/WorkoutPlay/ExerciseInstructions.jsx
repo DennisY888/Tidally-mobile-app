@@ -1,3 +1,4 @@
+// components/WorkoutPlay/ExerciseInstructions.jsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
