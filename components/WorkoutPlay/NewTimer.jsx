@@ -3,39 +3,82 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Play, Pause } from 'lucide-react-native';
+import { AppState } from 'react-native';
 
 const NewTimer = ({ duration, isRunning, onComplete, onToggleTimer, currentSet, totalSets }) => {
   const { colors } = useTheme();
   const [timeLeft, setTimeLeft] = useState(duration);
-  const completionHandled = useRef(false);
+
+
+  const intervalRef = useRef(null);
+  const startTimeRef = useRef(null);
+  const appState = useRef(AppState.currentState);
+  const backgroundTimeRef = useRef(null); 
 
   useEffect(() => {
     setTimeLeft(duration);
-    completionHandled.current = false;
   }, [duration, currentSet]);
 
   useEffect(() => {
-    if (!isRunning) return;
-    if (timeLeft <= 0) {
-      if (!completionHandled.current) {
-        completionHandled.current = true;
-        setTimeout(onComplete, 250);
-      }
+    if (!isRunning) {
+      clearInterval(intervalRef.current);
       return;
     }
-    const interval = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isRunning, timeLeft, onComplete]);
+
+    startTimeRef.current = Date.now();
+
+    intervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const newTimeLeft = duration - elapsed;
+
+      setTimeLeft(newTimeLeft);
+
+      if (newTimeLeft <= 0) {
+        clearInterval(intervalRef.current);
+        onComplete();
+      }
+    }, 250); 
+
+    return () => clearInterval(intervalRef.current);
+
+  }, [isRunning, duration, onComplete]);
+
+
+  useEffect(() => {
+    if (isRunning) {
+        startTimeRef.current = Date.now() - ((duration - timeLeft) * 1000);
+    }
+  }, [isRunning]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === "active") {
+        // App has come to the foreground
+        if (backgroundTimeRef.current && startTimeRef.current) {
+          const inactiveDuration = Date.now() - backgroundTimeRef.current;
+          startTimeRef.current += inactiveDuration; // Adjust start time to account for background time
+        }
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App is going to the background
+        backgroundTimeRef.current = Date.now();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
 
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const safeSeconds = Math.max(0, seconds);
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const progress = duration > 0 ? ((duration - timeLeft) / duration) * 100 : 0;
+  const progress = duration > 0 ? ((duration - Math.max(0, timeLeft)) / duration) * 100 : 0;
   const getTimeColor = () => {
     if (timeLeft <= 0) return colors.success;
     if (timeLeft < 6 && isRunning) return colors.error;
