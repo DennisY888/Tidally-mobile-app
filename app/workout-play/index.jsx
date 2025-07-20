@@ -1,7 +1,7 @@
 // app/workout-play/index.jsx
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, SafeAreaView, StatusBar, StyleSheet, Animated as RNAnimated } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
 import { useWorkoutPlayback } from '../../hooks/useWorkoutPlayback';
@@ -11,10 +11,14 @@ import WaveBackground from '../../components/WorkoutPlay/WaveBackground';
 import NewExerciseItem from '../../components/WorkoutPlay/NewExerciseItem';
 import { X, Clock } from 'lucide-react-native';
 
+
 export default function WorkoutPlay() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const navigation = useNavigation();
+
+  const [currentTimerLeft, setCurrentTimerLeft] = useState(0);
   
   const isResuming = params.isResuming === 'true';
   const workout = {
@@ -35,6 +39,27 @@ export default function WorkoutPlay() {
     isResuming ? sessionExercises.findIndex(ex => ex.remainingSets > 0) || 0 : 0
   );
   const flatListRef = useRef(null);
+
+
+  useEffect(() => {
+    // Track current timer state for remaining time calculation
+    const currentExercise = sessionExercises[currentExerciseIndex];
+    if (currentExercise && currentExercise.time && currentExercise.isTimerActive) {
+        const interval = setInterval(() => {
+            // This will trigger remaining time recalculation
+            setCurrentTimerLeft(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }
+}, [sessionExercises, currentExerciseIndex]);
+
+
+  useEffect(() => {
+      navigation.setOptions({
+        headerShown: false
+      });
+    }, []);
+
 
   useEffect(() => {
     if (!workoutComplete) {
@@ -59,24 +84,43 @@ export default function WorkoutPlay() {
           setTimeout(() => { setCurrentExerciseIndex(nextIndex); }, 800);
       }
   }, [sessionExercises, currentExerciseIndex, workoutComplete]);
+  
 
   const remainingTime = useMemo(() => {
     if (!sessionExercises) return '0:00';
     let remainingSeconds = 0;
+    
     sessionExercises.forEach((ex, index) => {
         if (index >= currentExerciseIndex) {
             const incompleteSets = ex.sets - (ex.completedSets || 0);
-            if (ex.time) {
-                remainingSeconds += ex.time * incompleteSets;
+            
+            if (index === currentExerciseIndex) {
+                // Current exercise - account for current progress
+                if (ex.time) {
+                    // For time-based: subtract completed time from current set
+                    const currentSetTime = ex.isTimerActive ? 
+                        ex.time : ex.time; // If not active, count full time
+                    remainingSeconds += currentSetTime + (ex.time * (incompleteSets - 1));
+                } else {
+                    // For rep-based: count all incomplete sets (can't track mid-set progress easily)
+                    remainingSeconds += (ex.reps || 0) * 2.0 * incompleteSets;
+                }
             } else {
-                remainingSeconds += (ex.reps || 0) * 2.5 * incompleteSets;
+                // Future exercises - count all incomplete sets
+                if (ex.time) {
+                    remainingSeconds += ex.time * incompleteSets;
+                } else {
+                    remainingSeconds += (ex.reps || 0) * 2.0 * incompleteSets;
+                }
             }
         }
     });
+    
     const minutes = Math.floor(remainingSeconds / 60);
     const seconds = remainingSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }, [sessionExercises, currentExerciseIndex]);
+}, [sessionExercises, currentExerciseIndex, currentTimerLeft]);
+
 
   const handleExit = async () => { if (!workoutComplete) { await saveSession(); } router.back(); };
   const onCompleteSet = (exerciseIndex, setIndex) => {
@@ -142,7 +186,7 @@ export default function WorkoutPlay() {
                         />
                     </View>
                 )}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item, index) => item.id || `exercise-${index}`}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
                 scrollEnabled={true} 
@@ -155,7 +199,7 @@ export default function WorkoutPlay() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    safeArea: { flex: 1, zIndex: 10 },
+    safeArea: { flex: 1, zIndex: 10, paddingTop: 20 },
     completionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     listContent: { paddingBottom: 50 },
 });

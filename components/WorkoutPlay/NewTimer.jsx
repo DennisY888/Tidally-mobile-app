@@ -41,14 +41,8 @@ const NewTimer = ({ duration, isRunning, onComplete, onToggleTimer, currentSet, 
 
     return () => clearInterval(intervalRef.current);
 
-  }, [isRunning, duration, onComplete]);
+  }, [isRunning, duration]);
 
-
-  useEffect(() => {
-    if (isRunning) {
-        startTimeRef.current = Date.now() - ((duration - timeLeft) * 1000);
-    }
-  }, [isRunning]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", nextAppState => {

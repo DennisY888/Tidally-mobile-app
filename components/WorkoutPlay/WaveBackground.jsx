@@ -30,9 +30,7 @@ const WaveBackground = () => {
   const wavePath4 = Skia.Path.MakeFromSVGString("M0,128L40,149.3C80,171,160,213,240,218.7C320,224,400,192,480,165.3C560,139,640,117,720,128C800,139,880,181,960,197.3C1040,213,1120,203,1200,176C1280,149,1360,107,1400,85.3L1440,64L1440,320L1400,320C1360,320,1280,320,1200,320C1120,320,1040,320,960,320C880,320,800,320,720,320C640,320,560,320,480,320C400,320,320,320,240,320C160,320,80,320,40,320L0,320Z");
   
   const animatedParallaxStyle = useAnimatedStyle(() => {
-    const translateX = animatedSensor.sensor.value.y * -20;
-    const translateY = animatedSensor.sensor.value.x * -20;
-    return { transform: [{ translateX }, { translateY }] };
+    return { transform: [{ translateX: 0 }, { translateY: 0 }] };
   });
 
   return (

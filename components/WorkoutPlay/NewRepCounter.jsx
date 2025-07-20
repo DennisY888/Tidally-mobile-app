@@ -34,7 +34,7 @@ const NewRepCounter = ({ reps, onComplete, currentSet, totalSets }) => {
       const timer = setTimeout(() => { onComplete(); }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [isComplete, onComplete]);
+  }, [isComplete]);
 
   const incrementRep = () => { if (!isComplete) setCompleted(prev => prev + 1); };
   const toggleAutoMode = () => { if (!isComplete) setAutoRunning(prev => !prev); };
@@ -63,7 +63,6 @@ const NewRepCounter = ({ reps, onComplete, currentSet, totalSets }) => {
               </TouchableOpacity>
               {!autoRunning && !isComplete && (
                   <TouchableOpacity onPress={incrementRep} className="w-16 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primaryLight }}>
-                      <Text className="text-xs font-medium" style={{color: colors.primary}}>+1 Rep</Text>
                   </TouchableOpacity>
               )}
             </View>
