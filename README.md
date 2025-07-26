@@ -23,3 +23,7 @@ Tidally | React Native, Firestore & Cloud Functions, Reanimated | Aug 2024 – P
   <img src="https://github.com/user-attachments/assets/e04309dd-cf6f-45d3-a9db-15047bf9398b" alt="Image 3" style="width: 48%; height: auto;">
   <img src="https://github.com/user-attachments/assets/33711564-5b68-484b-bf7e-0f1db33c3a37" alt="Image 4" style="width: 48%; height: auto;">
 </div>
+
+<div style="display: flex; justify-content: space-between; margin: 20px 0;">
+  <img src="https://github.com/user-attachments/assets/41043edf-3cdc-4bf5-a7a7-bac073c9113f" alt="Image 3" style="width: 48%; height: auto;">
+</div>
