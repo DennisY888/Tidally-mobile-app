@@ -1,10 +1,10 @@
 # Welcome to your Tidally 👋
 
-Tidally | React Native, Expo, Firebase, Tailwind, Clerk
-Vancouver, Canada
-Sep 2023 – Apr 2027 (expected)
-- Developing a cross-platform fitness app with exercise logging, messaging, and group sessions, utilizing Cloud Firestore for real-time synchronization, querying, and offline persistence
-- Integrated Google OAuth2 with Clerk for seamless, secure authentication
-- Enhanced UI performance with GPU-accelerated Animatable animations, optimizing JavaScript thread usage
-over built-in Animated API
-- Designed file-based navigation with Expo Router, simplifying routing and enhancing code maintainability
+Tidally | React Native, Firestore & Cloud Functions, Reanimated | Aug 2024 – Present 
+
+- Spearheaded the end-to-end development of Tidally, a full-stack fitness tracking app for iOS/Android that gamifies workout routines to increase user productivity and engagement 
+- Developed custom workout creation system supporting personalized routines, exercises and rep/time-based goals; Optimized image upload performance by implementing client-side compression pipeline, reducing file sizes by over 90% and achieving 8x upload speed improvement 
+- Eliminated stale data and created real-time data synchronization for seamless UI/UX by re-architecting data fetching from manual pull-to-refresh with live updates using Firestore onSnapshot listeners. 
+- Automated search indexing through Firebase Cloud Functions with 70 terms per document, enabling Firestore array-contains queries that reduced search latency from ~400ms to <50ms for lag-free user search experience. 
+- Constructed a polished UI praised in user surveys, engineering a responsive collapsible header by mapping scroll events to multiple component styles via Animated.interpolate to achieve a synchronized, native-quality animation. 
+- Implemented session persistence using AsyncStorage, enabling users to resume interrupted workouts seamlessly with 100% data retention across app restarts 
