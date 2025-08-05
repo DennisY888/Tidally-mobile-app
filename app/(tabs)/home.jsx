@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
 import { debounce } from 'lodash';
+import { MotiView } from 'moti';
 
 import { useTheme } from '../../context/ThemeContext';
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
@@ -27,6 +28,8 @@ import { useWorkouts } from '../../hooks/useWorkouts';
 import Workout from '../../components/Home/Workout'; 
 import { useActiveWorkout } from '../../context/WorkoutDetailContext'; 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUserProfile } from '../../context/UserProfileContext';
+import { getSVGComponent, adaptColorForDarkMode } from '../../constants/ProfileIcons';
 
 
 /**
@@ -56,6 +59,8 @@ export default function Home() {
 
   const { setActiveWorkout } = useActiveWorkout();
 
+  const { userProfile } = useUserProfile();
+
 
   // Helper function to determine search match context
   const getMatchContext = (workout, term) => {
@@ -67,6 +72,7 @@ export default function Home() {
     );
     return matchingExercise ? matchingExercise.name : null;
   };
+
 
   // Debounced search function
   const debouncedSearch = useCallback(
@@ -166,20 +172,53 @@ export default function Home() {
           >
             <Ionicons name="stopwatch-outline" size={28} color={colors.primary} />
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.profileButton}
             onPress={() => router.push('/profile')}
             activeOpacity={0.7}
           >
-            {user?.imageUrl ? (
-              <Image
-                source={{ uri: user.imageUrl }}
-                style={styles.profileImage}
-              />
+            {userProfile?.customProfile?.useCustom ? (
+              <MotiView
+                animate={{
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{
+                  type: 'timing',
+                  duration: 2500,
+                  repeat: Infinity,
+                }}
+              >
+                <View 
+                  style={[
+                    styles.profileImageCustom,
+                    styles.premiumProfileButton,
+                    { 
+                      backgroundColor: isDark ? 
+                        adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
+                        userProfile.customProfile.backgroundColor,
+                      borderColor: colors.primary + '30', // Subtle border
+                      shadowColor: colors.primary,
+                      ...Shadows[isDark ? 'dark' : 'light'].small, // Reduced shadow for home
+                    }
+                  ]}
+                >
+                  {(() => {
+                    const SVGComponent = getSVGComponent(
+                      userProfile.customProfile.animalType,
+                      userProfile.customProfile.animalColor
+                    );
+                    return SVGComponent ? <SVGComponent width={40} height={40} /> : null;
+                  })()}
+                </View>
+              </MotiView>
+            ) : user?.imageUrl ? (
+              <Image source={{ uri: user.imageUrl }} style={styles.profileImage} />
             ) : (
               <Ionicons name="person-circle-outline" size={32} color={colors.primary} />
             )}
           </TouchableOpacity>
+
         </View>
       </View>
         <TextInput
@@ -296,9 +335,9 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   searchInput: {
     height: 52, 
@@ -439,5 +478,27 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.divider,
+  },
+  profileImageCustom: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  premiumProfileButton: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    ...Shadows[isDark ? 'dark' : 'light'].medium,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });

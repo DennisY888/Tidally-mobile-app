@@ -24,6 +24,9 @@ import SettingsOption from '../../components/Profile/SettingsOption';
 import SettingsSection from '../../components/Profile/SettingsSection';
 import StatItem from '../../components/Profile/StatItem';
 import { WorkoutService } from '../../services/WorkoutService';
+import ProfileCustomizationModal from '../../components/Profile/ProfileCustomizationModal';
+import { useUserProfile } from '../../context/UserProfileContext';
+import { getSVGComponent, adaptColorForDarkMode } from '../../constants/ProfileIcons';
 
 
 /**
@@ -47,6 +50,9 @@ export default function Profile() {
     completedWorkouts: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+
+  const { userProfile } = useUserProfile();
   
   // Load user stats on component mount
   useEffect(() => {
@@ -152,18 +158,52 @@ export default function Profile() {
         backgroundColor: colors.background,
         borderBottomColor: colors.divider
       }]}>
-        <MotiView
-          from={{ opacity: 0, translateY: -20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 500 }}
+        <TouchableOpacity
+          onPress={() => setShowCustomizationModal(true)}
+          activeOpacity={0.8}
         >
-          <Image 
-            source={{ uri: user.imageUrl }}
-            style={[styles.profileImage, { 
-              borderColor: colors.primaryLight 
-            }]}
-          />
-        </MotiView>
+          {userProfile?.customProfile?.useCustom ? (
+            <MotiView
+              animate={{
+                scale: [1, 1.02, 1],
+              }}
+              transition={{
+                type: 'timing',
+                duration: 2000,
+                repeat: Infinity,
+              }}
+            >
+              <View 
+                style={[
+                  styles.profileImage,
+                  styles.premiumProfileContainer,
+                  styles.profileImageCentering,
+                  {
+                    backgroundColor: isDark ? 
+                      adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
+                      userProfile.customProfile.backgroundColor,
+                    borderColor: colors.primary + '40', // 25% opacity for subtle border
+                    shadowColor: colors.primary,
+                    ...Shadows[isDark ? 'dark' : 'light'].medium, // Changed from large to medium
+                  }
+                ]}
+              >
+                {(() => {
+                  const SVGComponent = getSVGComponent(
+                    userProfile.customProfile.animalType,
+                    userProfile.customProfile.animalColor
+                  );
+                  return SVGComponent ? <SVGComponent width={75} height={75} /> : null;
+                })()}
+              </View>
+            </MotiView>
+          ) : (
+            <Image 
+              source={{ uri: user.imageUrl }}
+              style={[styles.profileImage, { borderColor: colors.primaryLight }]}
+            />
+          )}
+        </TouchableOpacity>
         
         <MotiView
           from={{ opacity: 0 }}
@@ -175,13 +215,6 @@ export default function Profile() {
             {user.primaryEmailAddress?.emailAddress}
           </Text>
         </MotiView>
-        
-        <TouchableOpacity 
-          style={styles.editProfileButton}
-          onPress={() => console.log('Edit profile')}
-        >
-          <Text style={[styles.editProfileText, { color: colors.primary }]}>Edit Profile</Text>
-        </TouchableOpacity>
       </View>
       
       {/* User Stats */}
@@ -269,6 +302,11 @@ export default function Profile() {
       <Text style={[styles.versionText, { color: colors.textTertiary }]}>
         Tidally v1.0.0
       </Text>
+
+      <ProfileCustomizationModal
+        visible={showCustomizationModal}
+        onClose={() => setShowCustomizationModal(false)}
+      />
     </ScrollView>
   );
 }
@@ -336,5 +374,20 @@ const styles = StyleSheet.create({
   versionText: {
     ...Typography.caption1,
     textAlign: 'center',
+  },
+  premiumProfileContainer: {
+    borderWidth: 1.5, // Reduced from 4 to 1.5
+    shadowOffset: {
+      width: 0,
+      height: 4, // Increased shadow for depth without thick border
+    },
+    shadowOpacity: 0.15, // Reduced from 0.3
+    shadowRadius: 12, // Increased from 8
+    elevation: 6, // Reduced from 12
+  },
+  profileImageCentering: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    display: 'flex',
   },
 });

@@ -14,6 +14,7 @@ import React, { useEffect, useRef } from 'react';
 import { Colors } from '../constants/Colors';
 import { FavoritesProvider } from '../hooks/useRealtimeFavorites';
 import { WorkoutDetailProvider } from '../context/WorkoutDetailContext';
+import { UserProfileProvider } from '../context/UserProfileContext';
 
 
 // Token cache implementation for Clerk
@@ -142,14 +143,16 @@ export default function RootLayout() {
           <StatusBar hidden={true} />
           <FavoritesProvider>
             <WorkoutDetailProvider>
-              <ThemedApp>
-                <Stack>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="login/index" options={{ headerShown: false }} />
-                  <Stack.Screen name="stopwatch/index" options={{ headerShown: false }} />
-                </Stack>
-              </ThemedApp>
+              <UserProfileProvider>
+                  <ThemedApp>
+                    <Stack>
+                      <Stack.Screen name="index" options={{ headerShown: false }} />
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="login/index" options={{ headerShown: false }} />
+                      <Stack.Screen name="stopwatch/index" options={{ headerShown: false }} />
+                    </Stack>
+                  </ThemedApp>
+              </UserProfileProvider>
             </WorkoutDetailProvider>
           </FavoritesProvider>
         </ThemeProvider>
