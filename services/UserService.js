@@ -1,3 +1,5 @@
+// services/UserService.js
+
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/FirebaseConfig';
 
@@ -22,12 +24,13 @@ export const UserService = {
           animalType: null,
           animalColor: null,
           backgroundColor: '#E9F0F8', // Your primaryLight color
+          backgroundType: 'solid', // New field
+          gradientColors: null, // New field for gradient colors
           useCustom: false
         },
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
       await setDoc(doc(db, 'Users', userEmail), userData);
       return userData;
     } catch (error) {

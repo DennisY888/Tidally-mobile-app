@@ -1,3 +1,5 @@
+// components/Profile/EnhancedColorPalettes.jsx
+
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { MotiView } from 'moti';
@@ -8,135 +10,135 @@ import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colo
 
 const ENHANCED_PALETTES = {
   turtle: {
-    oceanMist: {
-      name: 'Ocean Mist',
-      solid: '#4A90E2',
-      gradient: ['#4A90E2', '#7BB3F0'],
+    oceanDepth: {
+      name: 'Ocean Depth',
+      solid: '#0760ae', // Blue turtle primary
+      gradient: ['#0760ae', '#b6dbfc'], // Blue turtle range
     },
-    emeraldTide: {
-      name: 'Emerald Tide',
-      solid: '#2ECB8E',
-      gradient: ['#2ECB8E', '#4ECDC4'],
+    forestPath: {
+      name: 'Forest Path',
+      solid: '#294127', // Green turtle primary
+      gradient: ['#294127', '#b7c7a7'], // Green turtle range
     },
-    sunsetCoral: {
-      name: 'Sunset Coral',
-      solid: '#FF6B9D',
-      gradient: ['#FF6B9D', '#FFB347'],
+    blossomPink: {
+      name: 'Blossom Pink',
+      solid: '#f472c9', // Pink turtle primary
+      gradient: ['#f472c9', '#fedff4'], // Pink turtle range
     },
-    goldenSand: {
-      name: 'Golden Sand',
-      solid: '#FFD93D',
-      gradient: ['#FFD93D', '#FFAB40'],
+    sunsetGold: {
+      name: 'Sunset Gold',
+      solid: '#fdc043', // Yellow turtle primary
+      gradient: ['#906101', '#fee1a5'], // Yellow turtle range
     },
   },
   shark: {
-    deepBlue: {
-      name: 'Deep Blue',
-      solid: '#1E3A8A',
-      gradient: ['#1E3A8A', '#3B82F6'],
+    abyssalBlue: {
+      name: 'Abyssal Blue',
+      solid: '#04335e', // Blue shark primary
+      gradient: ['#04335e', '#e1f1fe'], // Blue shark range
     },
-    electricOrange: {
-      name: 'Electric Orange',
-      solid: '#FF6B35',
-      gradient: ['#FF6B35', '#FFB347'],
+    moltenOrange: {
+      name: 'Molten Orange',
+      solid: '#f89257', // Orange shark primary
+      gradient: ['#5b3704', '#fde6c7'], // Orange shark range
     },
-    neonPink: {
-      name: 'Neon Pink',
-      solid: '#FF1B8D',
-      gradient: ['#FF1B8D', '#FF6B9D'],
+    roseQuartz: {
+      name: 'Rose Quartz',
+      solid: '#f472c9', // Pink shark primary
+      gradient: ['#980c6a', '#fff1fa'], // Pink shark range
     },
-    royalPurple: {
-      name: 'Royal Purple',
-      solid: '#7C3AED',
-      gradient: ['#7C3AED', '#A855F7'],
+    royalAmethyst: {
+      name: 'Royal Amethyst',
+      solid: '#954dc9', // Purple shark primary
+      gradient: ['#3b1954', '#f0dffc'], // Purple shark range
     },
   },
   fish: {
-    aquaMarine: {
-      name: 'Aqua Marine',
-      solid: '#26D0CE',
-      gradient: ['#26D0CE', '#4ECDC4'],
+    emeraldTide: {
+      name: 'Emerald Tide',
+      solid: '#198a21', // Green fish primary
+      gradient: ['#17431a', '#befbc3'], // Green fish range
     },
-    lavenderBloom: {
-      name: 'Lavender Bloom',
-      solid: '#B19CD9',
-      gradient: ['#B19CD9', '#E1BEE7'],
+    mysticViolet: {
+      name: 'Mystic Violet',
+      solid: '#bf47f5', // Purple fish primary
+      gradient: ['#581277', '#faeeff'], // Purple fish range
     },
-    tiffanyGlow: {
-      name: 'Tiffany Glow',
-      solid: '#0DD1C5',
-      gradient: ['#0DD1C5', '#26D0CE'],
+    tiffanyBreeze: {
+      name: 'Tiffany Breeze',
+      solid: '#2eedf6', // Tiffany fish primary
+      gradient: ['#03565a', '#edfdfe'], // Tiffany fish range
     },
-    roseGold: {
-      name: 'Rose Gold',
-      solid: '#FF8A95',
-      gradient: ['#FF8A95', '#FFB347'],
+    cherryBlossom: {
+      name: 'Cherry Blossom',
+      solid: '#d3096b', // Pink fish primary
+      gradient: ['#c21a6c', '#fcdfee'], // Pink fish range
     },
   },
   clam: {
-    pearlPink: {
-      name: 'Pearl Pink',
-      solid: '#FFB3D9',
-      gradient: ['#FFB3D9', '#FFC9E6'],
+    pearlEssence: {
+      name: 'Pearl Essence',
+      solid: '#f472c9', // Pink clam primary
+      gradient: ['#f472c9', '#fceff7'], // Pink clam range
     },
-    rubyRed: {
-      name: 'Ruby Red',
-      solid: '#DC2626',
-      gradient: ['#DC2626', '#EF4444'],
+    coralRed: {
+      name: 'Coral Red',
+      solid: '#f04a4a', // Red clam primary
+      gradient: ['#b50b0b', '#fed7d7'], // Red clam range
     },
-    crystalTeal: {
-      name: 'Crystal Teal',
-      solid: '#0DD1C5',
-      gradient: ['#0DD1C5', '#4ECDC4'],
+    crystalLagoon: {
+      name: 'Crystal Lagoon',
+      solid: '#09ebbb', // Tiffany clam primary
+      gradient: ['#08cea4', '#e2fef8'], // Tiffany clam range
     },
-    honeyGold: {
-      name: 'Honey Gold',
-      solid: '#F59E0B',
-      gradient: ['#F59E0B', '#FBBF24'],
+    goldenHoney: {
+      name: 'Golden Honey',
+      solid: '#f9b936', // Yellow clam primary
+      gradient: ['#f5aa10', '#fff4df'], // Yellow clam range
     },
   },
   starfish: {
-    blushPink: {
-      name: 'Blush Pink',
-      solid: '#FB7185',
-      gradient: ['#FB7185', '#FBBF24'],
+    blushRadiance: {
+      name: 'Blush Radiance',
+      solid: '#f472c9', // Pink star primary
+      gradient: ['#f472c9', '#fefaf8'], // Pink star range
     },
-    desertSand: {
-      name: 'Desert Sand',
-      solid: '#D4A574',
-      gradient: ['#D4A574', '#F3E5AB'],
+    desertMirage: {
+      name: 'Desert Mirage',
+      solid: '#e6b594', // Sand star primary
+      gradient: ['#e6b594', '#fefaf8'], // Sand star range
     },
-    tropicTurquoise: {
-      name: 'Tropic Turquoise',
-      solid: '#06B6D4',
-      gradient: ['#06B6D4', '#0DD1C5'],
+    aquaTropic: {
+      name: 'Aqua Tropic',
+      solid: '#4c8a7d', // Turquoise star primary
+      gradient: ['#4c8a7d', '#fefaf8'], // Turquoise star range
     },
-    sunburstYellow: {
-      name: 'Sunburst Yellow',
-      solid: '#FBBF24',
-      gradient: ['#FBBF24', '#FFD93D'],
+    sunburstGlow: {
+      name: 'Sunburst Glow',
+      solid: '#f5aa10', // Yellow star primary
+      gradient: ['#f5aa10', '#fefaf8'], // Yellow star range
     },
   },
   octopus: {
-    midnightBlue: {
-      name: 'Midnight Blue',
-      solid: '#1E3A8A',
-      gradient: ['#1E3A8A', '#312E81'],
+    deepSapphire: {
+      name: 'Deep Sapphire',
+      solid: '#204c73', // Blue octopus primary
+      gradient: ['#204c73', '#b6dbfc'], // Blue octopus range
     },
-    forestGreen: {
-      name: 'Forest Green',
-      solid: '#15803D',
-      gradient: ['#15803D', '#22C55E'],
+    forestMystic: {
+      name: 'Forest Mystic',
+      solid: '#708f68', // Green octopus primary
+      gradient: ['#29371d', '#cfe7b8'], // Green octopus range
     },
-    magentaDream: {
-      name: 'Magenta Dream',
-      solid: '#DB2777',
-      gradient: ['#DB2777', '#EC4899'],
+    roseGarden: {
+      name: 'Rose Garden',
+      solid: '#c25a9f', // Pink octopus primary
+      gradient: ['#a40870', '#fecbed'], // Pink octopus range
     },
-    amethyst: {
-      name: 'Amethyst',
-      solid: '#7C3AED',
-      gradient: ['#7C3AED', '#9333EA'],
+    velvetPurple: {
+      name: 'Velvet Purple',
+      solid: '#581277', // Purple octopus primary
+      gradient: ['#581277', '#f6e1ff'], // Purple octopus range
     },
   },
 };

@@ -17,9 +17,14 @@ import { WorkoutService } from '../../services/WorkoutService';
 import { Colors, Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import MarkFav from './../../components/MarkFav';
 import { useActiveWorkout } from '../../context/WorkoutDetailContext';
+import { useTheme } from '../../context/ThemeContext';
 
 
 export default function Workout({ workout, layout = 'row' }) {
+
+  const { colors, isDark } = useTheme();
+  const styles = getStyles(colors, isDark);
+
   const router = useRouter();
   const { setActiveWorkout } = useActiveWorkout();
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -29,9 +34,9 @@ export default function Workout({ workout, layout = 'row' }) {
   // Get the difficulty level based on estimated time 
   const getDifficultyLevel = () => {
     const time = parseInt(workout?.est_time) || 0;
-    if (time < 20) return { level: 'Beginner', color: Colors.light.success };
-    if (time < 40) return { level: 'Intermediate', color: Colors.light.warning };
-    return { level: 'Advanced', color: Colors.light.error };
+    if (time < 20) return { level: 'Beginner', color: colors.success }; // ✅ USE THEME COLOR
+    if (time < 40) return { level: 'Intermediate', color: colors.warning }; // ✅ USE THEME COLOR
+    return { level: 'Advanced', color: colors.error }; // ✅ USE THEME COLOR
   };
   
   const difficulty = getDifficultyLevel();
@@ -152,7 +157,7 @@ export default function Workout({ workout, layout = 'row' }) {
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <Ionicons name="fitness" size={40} color={Colors.light.textTertiary} />
+              <Ionicons name="fitness" size={40} color={colors.textTertiary} /> {/* ✅ USE THEME COLOR */}
             </View>
           )}
           
@@ -184,14 +189,14 @@ export default function Workout({ workout, layout = 'row' }) {
           <View style={styles.statsContainer}>
             {/* Duration */}
             <View style={styles.statItem}>
-              <Ionicons name="time-outline" size={14} color={Colors.light.primary} />
-              <Text style={styles.statText}>{workout.est_time} min</Text>
+              <Ionicons name="time-outline" size={14} color={colors.primary} /> {/* ✅ USE THEME COLOR */}
+              <Text style={styles.statText}>{workout?.est_time || '0'} min</Text>
             </View>
             
             {/* Exercise count */}
             <View style={styles.statItem}>
-              <Ionicons name="barbell-outline" size={14} color={Colors.light.primary} />
-              <Text style={styles.statText}>{exerciseCount} exercises</Text>
+              <Ionicons name="barbell-outline" size={14} color={colors.primary} /> {/* ✅ USE THEME COLOR */}
+              <Text style={styles.statText}>{exerciseCount || 0} exercises</Text>
             </View>
           </View>
         </View>
@@ -201,15 +206,15 @@ export default function Workout({ workout, layout = 'row' }) {
 }
 
 
-const styles = StyleSheet.create({
+const getStyles = (colors, isDark) => StyleSheet.create({
   container: {
     width: '100%',
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    backgroundColor: Colors.light.background,
+    backgroundColor: colors.background, // ✅ THEME-AWARE
     marginRight: Spacing.md,
     marginBottom: Spacing.md,
-    ...Shadows.light.medium,
+    ...Shadows[isDark ? 'dark' : 'light'].medium, // ✅ THEME-AWARE SHADOWS
   },
   pressable: {
     flexDirection: 'row',
@@ -229,7 +234,7 @@ const styles = StyleSheet.create({
   placeholderImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.light.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary, // ✅ THEME-AWARE
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -244,7 +249,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.light.small,
+    ...Shadows[isDark ? 'dark' : 'light'].small, // ✅ THEME-AWARE SHADOWS
   },
   difficultyBadge: {
     position: 'absolute',
@@ -253,7 +258,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary, // ✅ DEFAULT THEME COLOR
   },
   difficultyText: {
     ...Typography.caption2,
@@ -268,7 +273,7 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.headline,
     fontSize: 16,
-    color: Colors.light.text,
+    color: colors.text, // ✅ THEME-AWARE
     marginBottom: 8,
   },
   statsContainer: {
@@ -282,7 +287,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     ...Typography.caption1,
-    color: Colors.light.textSecondary,
+    color: colors.textSecondary, // ✅ THEME-AWARE
     marginLeft: 4,
   },
   creatorContainer: {
@@ -299,7 +304,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.light.primary,
+    backgroundColor: colors.primary, // ✅ THEME-AWARE
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 6,
@@ -311,7 +316,7 @@ const styles = StyleSheet.create({
   },
   creatorName: {
     ...Typography.caption1,
-    color: Colors.light.textTertiary,
+    color: colors.textTertiary, // ✅ THEME-AWARE
     flex: 1,
   },
   rowLayout: {

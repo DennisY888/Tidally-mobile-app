@@ -1,5 +1,5 @@
 // components/Home/Folder.jsx 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,20 +9,23 @@ import { Colors, Typography, BorderRadius, Shadows, Spacing } from '../../consta
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
-
 import { WorkoutService } from '../../services/WorkoutService';
-
-
-// This is the reusable form component we created.
 import NewCategoryForm from '../Forms/NewCategoryForm';
+import { useTheme } from '../../context/ThemeContext';
+
 
 export default function Folder({ category, user }) {
+
+  const { colors, isDark } = useTheme();
+  const styles = getStyles(colors, isDark);
+
   const [categoryList, setCategoryList] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const scaleAnims = useRef(categoryList.map(() => new Animated.Value(1))).current;
   
+
   // useCallback memoizes the function to prevent unnecessary re-renders.
   const getCategories = useCallback(async () => {
     if (!user?.primaryEmailAddress?.emailAddress) {
@@ -39,18 +42,22 @@ export default function Folder({ category, user }) {
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       setCategoryList(data);
-      
-      // Only set the initial category if one isn't already selected.
-      if (data.length > 0 && !selectedCategory) {
-        setSelectedCategory(data[0].name);
-        category(data[0].name); // Propagate selection to parent
-      }
     } catch (error) {
       console.error("Error fetching categories:", error);
     } finally {
       setLoading(false);
     }
-  }, [user, selectedCategory]);
+  }, [user]);
+
+
+  useEffect(() => {
+    // Only set initial category if we have categories and no category is selected
+    if (categoryList.length > 0 && !selectedCategory) {
+      const firstCategory = categoryList[0].name;
+      setSelectedCategory(firstCategory);
+      category(firstCategory); // Propagate to parent
+    }
+  }, [categoryList, selectedCategory, category]);
 
 
   // useFocusEffect is the correct hook for this job. It re-fetches data
@@ -140,8 +147,8 @@ export default function Folder({ category, user }) {
             <LinearGradient
               colors={
                 isSelected
-                  ? [Colors.light.primary, Colors.light.secondary]
-                  : [Colors.light.background, Colors.light.backgroundSecondary]
+                  ? [colors.primary, colors.secondary] // ✅ USE THEME COLORS
+                  : [colors.background, colors.backgroundSecondary] // ✅ USE THEME COLORS
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -151,11 +158,11 @@ export default function Folder({ category, user }) {
                 {item?.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} style={styles.categoryImageLarge} />
                 ) : (
-                  <Ionicons name="folder" size={40} color={isSelected ? '#fff' : Colors.light.textSecondary} />
+                  <Ionicons name="folder" size={40} color={isSelected ? '#fff' : colors.textSecondary} /> 
                 )}
               </View>
               <Text 
-                style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : Colors.light.text }]}
+                style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : colors.text }]} // ✅ USE THEME COLOR
                 numberOfLines={2}
               >
                 {item?.name}
@@ -208,7 +215,7 @@ export default function Folder({ category, user }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, isDark) => StyleSheet.create({
     wrapper: {
       marginTop: Spacing.lg,
       marginBottom: Spacing.md,
@@ -222,7 +229,7 @@ const styles = StyleSheet.create({
     },
     headerText: {
       ...Typography.title2,
-      color: Colors.light.text,
+      color: colors.text, 
     },
     addButton: {
       flexDirection: 'row',
@@ -232,7 +239,7 @@ const styles = StyleSheet.create({
     },
     addButtonText: {
       ...Typography.subhead,
-      color: Colors.light.primary,
+      color: colors.primary, 
       marginLeft: Spacing.sm,
       fontFamily: 'outfit-medium',
     },
@@ -257,7 +264,7 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       padding: Spacing.sm,
       borderRadius: BorderRadius.lg,
-      ...Shadows.light.medium,
+      ...Shadows[isDark ? 'dark' : 'light'].medium, 
     },
     iconContainerLarge: {
       width: 48,   
@@ -278,19 +285,19 @@ const styles = StyleSheet.create({
       fontFamily: 'outfit-medium',
     },
     placeholderContainer: {
-      backgroundColor: Colors.light.backgroundSecondary,
+      backgroundColor: colors.backgroundSecondary, 
       borderRadius: BorderRadius.lg,
     },
     emptyContainer: {
       marginHorizontal: Spacing.md,
       padding: Spacing.xl,
       alignItems: 'center',
-      backgroundColor: Colors.light.backgroundSecondary,
+      backgroundColor: colors.backgroundSecondary, 
       borderRadius: BorderRadius.lg,
     },
     emptyText: {
       ...Typography.body,
       textAlign: 'center',
-      color: Colors.light.textSecondary,
+      color: colors.textSecondary, 
     },
 });

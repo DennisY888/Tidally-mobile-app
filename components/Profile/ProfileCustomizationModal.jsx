@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+// components/Profile/ProfileCustomizationModal.jsx
+
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
@@ -16,20 +18,65 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { height } = Dimensions.get('window');
 
+
+const generateColorVariations = (baseColor) => {
+  // Generate lighter and darker variations of the base color
+  const variations = [];
+  const rgb = hexToRgb(baseColor);
+  if (!rgb) return [baseColor];
+  
+  // Generate 6 variations
+  for (let i = 0; i < 6; i++) {
+    const factor = 0.4 + (i * 0.2); // 0.4, 0.6, 0.8, 1.0, 1.2, 1.4
+    const newR = Math.min(255, Math.round(rgb.r * factor));
+    const newG = Math.min(255, Math.round(rgb.g * factor));
+    const newB = Math.min(255, Math.round(rgb.b * factor));
+    variations.push(rgbToHex(newR, newG, newB));
+  }
+  
+  return variations;
+};
+
+
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+};
+
+
+const rgbToHex = (r, g, b) => {
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+};
+
+
 export default function ProfileCustomizationModal({ visible, onClose }) {
   const { colors, isDark } = useTheme();
   const { userProfile, updateUserProfile } = useUserProfile();
-  const [step, setStep] = useState(1); // 1: Animals, 2: Colors, 3: Background
+  const [step, setStep] = useState(1); 
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
-  const [backgroundColor, setBackgroundColor] = useState(userProfile?.customProfile?.backgroundColor || colors.primaryLight);
+
+  const [backgroundColor, setBackgroundColor] = useState(
+    userProfile?.customProfile?.backgroundColor || colors.primaryLight
+  );
+  const [backgroundType, setBackgroundType] = useState(
+    userProfile?.customProfile?.backgroundType || 'solid' // ✅ Use existing type
+  );
+  const [gradientColors, setGradientColors] = useState(
+    userProfile?.customProfile?.gradientColors || [
+      userProfile?.customProfile?.backgroundColor || colors.primaryLight,
+      userProfile?.customProfile?.backgroundColor || colors.primaryLight
+    ] // ✅ Use existing gradient or create from background
+  );
+
   const [isLoading, setIsLoading] = useState(false);
   const slideAnim = useRef(new Animated.Value(height)).current;
-
-  const [backgroundType, setBackgroundType] = useState('solid'); // 'solid', 'gradient', 'pattern'
-  const [gradientColors, setGradientColors] = useState([backgroundColor, backgroundColor]);
-
   const [selectedPalette, setSelectedPalette] = useState(null);
+
 
   React.useEffect(() => {
     if (visible) {
@@ -37,24 +84,51 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (userProfile?.customProfile) {
+      setBackgroundColor(userProfile.customProfile.backgroundColor || colors.primaryLight);
+      setBackgroundType(userProfile.customProfile.backgroundType || 'solid');
+      setGradientColors(
+        userProfile.customProfile.gradientColors || [
+          userProfile.customProfile.backgroundColor || colors.primaryLight,
+          userProfile.customProfile.backgroundColor || colors.primaryLight
+        ]
+      );
+    }
+  }, [userProfile, colors.primaryLight]);
+
+  
   const handleClose = () => {
     Animated.timing(slideAnim, { toValue: height, duration: 300, useNativeDriver: true }).start(() => {
       onClose();
       setStep(1);
       setSelectedAnimal(null);
       setSelectedColor(null);
+      setSelectedPalette(null);
+      // Reset to profile defaults
+      setBackgroundColor(userProfile?.customProfile?.backgroundColor || colors.primaryLight);
+      setBackgroundType(userProfile?.customProfile?.backgroundType || 'solid');
+      setGradientColors(
+        userProfile?.customProfile?.gradientColors || [
+          userProfile?.customProfile?.backgroundColor || colors.primaryLight,
+          userProfile?.customProfile?.backgroundColor || colors.primaryLight
+        ]
+      );
     });
   };
+
 
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setStep(step + 1);
   };
 
+
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setStep(step - 1);
   };
+
 
   const handleSave = async () => {
     if (!selectedAnimal || !selectedColor) return;
@@ -62,11 +136,24 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
+      // Prepare background data based on type
+      const backgroundData = backgroundType === 'solid' 
+        ? {
+            backgroundColor,
+            backgroundType: 'solid',
+            gradientColors: null, // Clear gradient data for solid
+          }
+        : {
+            backgroundColor: gradientColors[0], // Store first color as fallback
+            backgroundType: 'gradient',
+            gradientColors: gradientColors, // Store full gradient array
+          };
+
       const success = await updateUserProfile({
         customProfile: {
           animalType: selectedAnimal.key,
           animalColor: selectedColor.name,
-          backgroundColor,
+          ...backgroundData, // Spread the background data
           useCustom: true
         }
       });
@@ -87,7 +174,9 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
     }
   };
 
+
   if (!visible) return null;
+
 
   const animals = getAnimalList();
   const displayBackgroundColor = isDark ? adaptColorForDarkMode(backgroundColor) : backgroundColor;
@@ -210,64 +299,67 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
                 {/* Color Variants (only show when animal selected) */}
                 {selectedAnimal && (
                 <MotiView
-                    from={{ opacity: 0, translateY: 20 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 200 }}
-                    style={styles.colorVariantsContainer}
+                  from={{ opacity: 0, translateY: 20 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 200 }}
+                  style={styles.colorVariantsContainer}
                 >
-                    <Text style={[styles.colorSectionTitle, { color: colors.text }]}>
+                  <Text style={[styles.colorSectionTitle, { color: colors.text }]}>
                     Choose Color
-                    </Text>
+                  </Text>
+                  <View style={styles.colorGridContainer}>
                     <View style={styles.colorGrid}>
-                    {getAnimalColors(selectedAnimal.key).map((color, index) => {
+                      {getAnimalColors(selectedAnimal.key).map((color, index) => {
                         const SVGComponent = color.component;
                         const isSelected = selectedColor?.name === color.name;
                         
                         return (
-                        <MotiView
+                          <MotiView
                             key={color.name}
                             from={{ opacity: 0, scale: 0.6 }}
                             animate={{ 
-                            opacity: 1, 
-                            scale: isSelected ? 1.1 : 1,
+                              opacity: 1, 
+                              scale: isSelected ? 1.1 : 1,
                             }}
                             transition={{
-                            type: 'spring',
-                            damping: 16,
-                            stiffness: 320,
-                            delay: index * 100,
+                              type: 'spring',
+                              damping: 16,
+                              stiffness: 320,
+                              delay: index * 100,
                             }}
-                        >
+                            style={styles.colorCardWrapper}
+                          >
                             <TouchableOpacity
-                            style={[
+                              style={[
                                 styles.colorCard,
                                 {
-                                backgroundColor: colors.backgroundSecondary,
-                                borderColor: isSelected ? colors.primary : 'transparent',
-                                ...Shadows[isDark ? 'dark' : 'light'].small,
+                                  backgroundColor: colors.backgroundSecondary,
+                                  borderColor: isSelected ? colors.primary : 'transparent',
+                                  ...Shadows[isDark ? 'dark' : 'light'].small,
                                 }
-                            ]}
-                            onPress={() => {
+                              ]}
+                              onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 setSelectedColor(color);
                                 // Auto-advance after selection
                                 setTimeout(handleNext, 300);
-                            }}
-                            activeOpacity={0.8}
+                              }}
+                              activeOpacity={0.8}
                             >
-                            <View style={styles.colorPreview}>
+                              <View style={styles.colorPreview}>
                                 {SVGComponent && <SVGComponent width={90} height={90} />}
-                            </View>
-                            <Text style={[styles.colorName, { color: colors.text }]}>
+                              </View>
+                              <Text style={[styles.colorName, { color: colors.text }]}>
                                 {color.name.charAt(0).toUpperCase() + color.name.slice(1)}
-                            </Text>
+                              </Text>
                             </TouchableOpacity>
-                        </MotiView>
+                          </MotiView>
                         );
-                    })}
+                      })}
                     </View>
+                  </View>
                 </MotiView>
-                )}
+              )}
             </View>
             )}
 
@@ -280,27 +372,49 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
                 
                 {/* Live Preview with Gradient Support */}
                 <MotiView
-                animate={{ 
-                    backgroundColor: backgroundType === 'solid' ? displayBackgroundColor : 'transparent'
-                }}
-                transition={{ type: 'timing', duration: 300 }}
-                style={[styles.profilePreview, { borderColor: colors.divider }]}
+                  style={[styles.profilePreview, { borderColor: colors.divider }]}
                 >
-                {backgroundType === 'gradient' && (
+                  {backgroundType === 'gradient' && gradientColors ? (
                     <LinearGradient
-                    colors={[
-                        isDark ? adaptColorForDarkMode(gradientColors[0]) : gradientColors[0],
-                        isDark ? adaptColorForDarkMode(gradientColors[1]) : gradientColors[1]
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[StyleSheet.absoluteFillObject, { borderRadius: 60 }]}
+                      colors={
+                        isDark 
+                          ? gradientColors.map(color => adaptColorForDarkMode(color))
+                          : gradientColors
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[StyleSheet.absoluteFillObject, { borderRadius: 60 }]}
                     />
-                )}
-                {(() => {
+                  ) : (
+                    <MotiView
+                      animate={{ 
+                        backgroundColor: backgroundType === 'solid' ? 
+                          (isDark ? adaptColorForDarkMode(backgroundColor) : backgroundColor) : 
+                          'transparent'
+                      }}
+                      transition={{ type: 'timing', duration: 200 }} // Smooth color transitions
+                      style={[StyleSheet.absoluteFillObject, { borderRadius: 60 }]}
+                    />
+                  )}
+                  
+                  {(() => {
                     const SVGComponent = selectedColor.component;
                     return SVGComponent ? <SVGComponent width={90} height={90} /> : null;
-                })()}
+                  })()}
+                  
+                  {/* Add subtle breathing animation for preview */}
+                  <MotiView
+                    style={styles.previewGlow}
+                    animate={{
+                      opacity: [0.2, 0.4, 0.2],
+                      scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                      type: 'timing',
+                      duration: 2000,
+                      repeat: Infinity,
+                    }}
+                  />
                 </MotiView>
 
                 {/* Background Type Selector */}
@@ -348,47 +462,107 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
 
                 {/* Color Wheel Section */}
                 <View style={styles.colorWheelSection}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>
                     Custom Colors
-                </Text>
-                {backgroundType === 'solid' ? (
+                  </Text>
+                  
+                  {/* Main Color Wheel */}
+                  <View style={styles.mainColorWheelContainer}>
                     <ColorPicker
-                    color={backgroundColor}
-                    onColorChangeComplete={setBackgroundColor}
-                    thumbSize={25}
-                    sliderSize={25}
-                    noSnap={true}
-                    useNativeDriver={true}
-                    style={styles.colorWheel}
+                      color={backgroundType === 'solid' ? backgroundColor : gradientColors[0]}
+                      onColorChange={(color) => {
+                        if (backgroundType === 'solid') {
+                          setBackgroundColor(color);
+                        } else {
+                          setGradientColors([color, gradientColors[1]]);
+                        }
+                      }}
+                      onColorChangeComplete={(color) => {
+                        if (backgroundType === 'solid') {
+                          setBackgroundColor(color);
+                        } else {
+                          setGradientColors([color, gradientColors[1]]);
+                        }
+                      }}
+                      thumbSize={25}
+                      sliderSize={25}
+                      noSnap={true}
+                      useNativeDriver={true}
+                      style={styles.colorWheel}
                     />
-                ) : (
-                    <View style={styles.gradientControlsContainer}>
-                    <View style={styles.gradientColorControl}>
-                        <Text style={[styles.gradientLabel, { color: colors.text }]}>Start</Text>
+                  </View>
+
+                  {/* Mini Color Wheel and Color Dots */}
+                  <View style={styles.secondaryControlsContainer}>
+                    {backgroundType === 'solid' ? (
+                      // Solid mode: Show mini wheel for brightness/saturation
+                      <View style={styles.solidControlsContainer}>
+                        <Text style={[styles.controlLabel, { color: colors.text }]}>Fine Tune</Text>
                         <ColorPicker
-                        color={gradientColors[0]}
-                        onColorChangeComplete={(color) => setGradientColors([color, gradientColors[1]])}
-                        thumbSize={20}
-                        sliderSize={20}
-                        noSnap={true}
-                        useNativeDriver={true}
-                        style={styles.smallColorWheel}
+                          color={backgroundColor}
+                          onColorChange={setBackgroundColor}
+                          onColorChangeComplete={setBackgroundColor}
+                          thumbSize={20}
+                          sliderSize={20}
+                          noSnap={true}
+                          useNativeDriver={true}
+                          style={styles.smallColorWheel}
                         />
-                    </View>
-                    <View style={styles.gradientColorControl}>
-                        <Text style={[styles.gradientLabel, { color: colors.text }]}>End</Text>
-                        <ColorPicker
-                        color={gradientColors[1]}
-                        onColorChangeComplete={(color) => setGradientColors([gradientColors[0], color])}
-                        thumbSize={20}
-                        sliderSize={20}
-                        noSnap={true}
-                        useNativeDriver={true}
-                        style={styles.smallColorWheel}
-                        />
-                    </View>
-                    </View>
-                )}
+                        <View style={styles.colorDotsContainer}>
+                          <View style={styles.colorDotsSection}>
+                            {generateColorVariations(backgroundColor).map((color, index) => (
+                              <TouchableOpacity
+                                key={index}
+                                style={[styles.colorDot, { backgroundColor: color }]}
+                                onPress={() => setBackgroundColor(color)}
+                              />
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      // Gradient mode: Show two separate controls
+                      <View style={styles.gradientControlsContainer}>
+                        <View style={styles.gradientColorControl}>
+                          <Text style={[styles.gradientLabel, { color: colors.text }]}>Start</Text>
+                          <ColorPicker
+                            color={gradientColors[0]}
+                            onColorChange={(color) => {
+                              // ✅ REAL-TIME GRADIENT START COLOR UPDATE
+                              setGradientColors([color, gradientColors[1]]);
+                            }}
+                            onColorChangeComplete={(color) => {
+                              setGradientColors([color, gradientColors[1]]);
+                            }}
+                            thumbSize={20}
+                            sliderSize={20}
+                            noSnap={true}
+                            useNativeDriver={true}
+                            style={styles.smallColorWheel}
+                          />
+                        </View>
+                        
+                        <View style={styles.gradientColorControl}>
+                          <Text style={[styles.gradientLabel, { color: colors.text }]}>End</Text>
+                          <ColorPicker
+                            color={gradientColors[1]}
+                            onColorChange={(color) => {
+                              // ✅ REAL-TIME GRADIENT END COLOR UPDATE
+                              setGradientColors([gradientColors[0], color]);
+                            }}
+                            onColorChangeComplete={(color) => {
+                              setGradientColors([gradientColors[0], color]);
+                            }}
+                            thumbSize={20}
+                            sliderSize={20}
+                            noSnap={true}
+                            useNativeDriver={true}
+                            style={styles.smallColorWheel}
+                          />
+                        </View>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 {/* Fixed Save Button Container */}
@@ -457,13 +631,21 @@ const styles = StyleSheet.create({
   animalName: { ...Typography.subhead, fontFamily: 'outfit-medium', marginBottom: Spacing.sm },
   previewContainer: { alignItems: 'center', marginBottom: Spacing.xl },
   animalPreview: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center' },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: Spacing.md },
+  colorGrid: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', // Center the items
+    alignItems: 'center',
+    gap: Spacing.md, 
+    width: '100%',
+    maxWidth: 320, // Limit max width to prevent over-stretching
+    flexWrap: 'nowrap', // Prevent wrapping
+  },
   colorCard: { 
-    width: '48%', 
-    aspectRatio: 1.1, // Adjusted ratio
-    borderRadius: BorderRadius.xl, // Changed from lg
-    borderWidth: 4, 
-    padding: Spacing.lg, 
+    width: '100%', 
+    aspectRatio: 1.2, 
+    borderRadius: BorderRadius.md, 
+    borderWidth: 2, 
+    padding: Spacing.xs, 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
@@ -543,6 +725,7 @@ const styles = StyleSheet.create({
   colorVariantsContainer: {
     marginTop: Spacing.md,
     alignItems: 'center',
+    width: '100%', // Ensure full width
   },
   colorSectionTitle: {
     ...Typography.callout,
@@ -587,17 +770,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: Spacing.xxl, // Space for save button
   },
-  gradientControlsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around', // Changed from center spacing
-    width: '100%',
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.xxl, // Increased gap
-  },
-  gradientColorControl: {
-    alignItems: 'center',
-    flex: 1, // Added flex to distribute space evenly
-  },
   smallColorWheel: {
     width: 120, // Reduced from 120
     height: 120, // Reduced from 120
@@ -614,5 +786,73 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.lg,
+  },
+  colorGridContainer: {
+    marginTop: Spacing.lg,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorCardWrapper: {
+    flex: 1,
+    maxWidth: 70, // Consistent width for each card
+    alignItems: 'center',
+  },
+  mainColorWheelContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  secondaryControlsContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  solidControlsContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  controlLabel: {
+    ...Typography.caption1,
+    marginBottom: Spacing.sm,
+    fontFamily: 'outfit-medium',
+  },
+  colorDotsContainer: {
+    marginTop: Spacing.md,
+    width: '100%',
+    alignItems: 'center',
+  },
+  colorDotsSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+    maxWidth: 200, // Prevent overflow
+  },
+  colorDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: Spacing.xs,
+  },
+  gradientControlsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  gradientColorControl: {
+    alignItems: 'center',
+    flex: 1,
+    maxWidth: 150, // Prevent sections from getting too wide
+  },
+  previewGlow: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 65,
+    borderWidth: 2,
   },
 });

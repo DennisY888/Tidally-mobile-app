@@ -322,6 +322,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg
   },
   title: {
+    marginTop: Spacing.lg,
     ...Typography.title1,
     marginBottom: Spacing.lg,
   },

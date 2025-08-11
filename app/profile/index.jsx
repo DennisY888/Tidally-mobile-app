@@ -15,7 +15,7 @@ import { useRouter, useNavigation } from 'expo-router';
 import { useUser, useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
 
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
@@ -27,6 +27,7 @@ import { WorkoutService } from '../../services/WorkoutService';
 import ProfileCustomizationModal from '../../components/Profile/ProfileCustomizationModal';
 import { useUserProfile } from '../../context/UserProfileContext';
 import { getSVGComponent, adaptColorForDarkMode } from '../../constants/ProfileIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 
 /**
@@ -54,51 +55,62 @@ export default function Profile() {
 
   const { userProfile } = useUserProfile();
   
-  // Load user stats on component mount
+
   useEffect(() => {
     navigation.setOptions({
-        headerShown: false
-      });
+      headerShown: false
+    });
 
-    if (user) {
-      fetchUserStats();
-    }
-  }, [user]);
-  
-
-  /**
-   * Fetches user statistics from Firestore
-   */
-  const fetchUserStats = async () => {
-    setIsLoading(true);
-    try {
-      // Get workouts created by user using WorkoutService
-      const { workouts } = await WorkoutService.getWorkouts({
-        userEmail: user?.primaryEmailAddress?.emailAddress
-      });
-      
-      // Get user favorites
-      const favoritesQuery = query(
-        collection(db, 'Favorites'),
-        where('email', '==', user?.primaryEmailAddress?.emailAddress)
-      );
-      const favoritesSnapshot = await getDocs(favoritesQuery);
-      
-      // Get completed workouts (assuming you have a collection for this)
-      // For now we'll use a placeholder value
-      const completedWorkouts = 0;
-      
-      setStats({
-        totalWorkouts: workouts.length,
-        favorites: favoritesSnapshot.docs[0]?.data()?.favorites?.length || 0,
-        completedWorkouts: completedWorkouts
-      });
-    } catch (error) {
-      console.error("Error fetching user stats:", error);
-    } finally {
+    if (!user?.primaryEmailAddress?.emailAddress) {
       setIsLoading(false);
+      return;
     }
-  };
+
+    setIsLoading(true);
+    
+    // ✅ REAL-TIME LISTENER FOR WORKOUTS COUNT
+    const workoutsQuery = query(
+      collection(db, 'Routines'),
+      where('user.email', '==', user.primaryEmailAddress.emailAddress)
+    );
+    
+    const unsubscribeWorkouts = onSnapshot(workoutsQuery, (snapshot) => {
+      const workoutCount = snapshot.docs.length;
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        totalWorkouts: workoutCount // ✅ UPDATES IMMEDIATELY WHEN WORKOUTS CHANGE
+      }));
+      
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error with workouts stats snapshot:", error);
+      setIsLoading(false);
+    });
+
+    // ✅ REAL-TIME LISTENER FOR FAVORITES COUNT  
+    const favoritesQuery = query(
+      collection(db, 'Favorites'),
+      where('email', '==', user.primaryEmailAddress.emailAddress)
+    );
+    
+    const unsubscribeFavorites = onSnapshot(favoritesQuery, (snapshot) => {
+      const favoritesCount = snapshot.docs[0]?.data()?.favorites?.length || 0;
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        favorites: favoritesCount // ✅ UPDATES IMMEDIATELY WHEN FAVORITES CHANGE
+      }));
+    }, (error) => {
+      console.error("Error with favorites stats snapshot:", error);
+    });
+
+    // ✅ CLEANUP BOTH LISTENERS
+    return () => {
+      unsubscribeWorkouts();
+      unsubscribeFavorites();
+    };
+  }, [user?.primaryEmailAddress?.emailAddress]);
   
 
   /**
@@ -165,11 +177,12 @@ export default function Profile() {
           {userProfile?.customProfile?.useCustom ? (
             <MotiView
               animate={{
-                scale: [1, 1.02, 1],
+                scale: [1, 1.05, 1],
+                rotateY: ['0deg', '5deg', '-5deg', '0deg'],
               }}
               transition={{
                 type: 'timing',
-                duration: 2000,
+                duration: 4000,
                 repeat: Infinity,
               }}
             >
@@ -178,30 +191,103 @@ export default function Profile() {
                   styles.profileImage,
                   styles.premiumProfileContainer,
                   styles.profileImageCentering,
+                  styles.superGrandProfileContainer,
                   {
-                    backgroundColor: isDark ? 
-                      adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
-                      userProfile.customProfile.backgroundColor,
-                    borderColor: colors.primary + '40', // 25% opacity for subtle border
+                    borderColor: colors.primary + '60',
                     shadowColor: colors.primary,
-                    ...Shadows[isDark ? 'dark' : 'light'].medium, // Changed from large to medium
+                    ...Shadows[isDark ? 'dark' : 'light'].large,
                   }
                 ]}
               >
+                {/* Conditional background rendering */}
+                {userProfile.customProfile.backgroundType === 'gradient' && userProfile.customProfile.gradientColors ? (
+                  <LinearGradient
+                    colors={
+                      isDark 
+                        ? userProfile.customProfile.gradientColors.map(color => adaptColorForDarkMode(color))
+                        : userProfile.customProfile.gradientColors
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[StyleSheet.absoluteFillObject, { borderRadius: 50 }]}
+                  />
+                ) : (
+                  <View 
+                    style={[
+                      StyleSheet.absoluteFillObject,
+                      {
+                        backgroundColor: isDark ? 
+                          adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
+                          userProfile.customProfile.backgroundColor,
+                        borderRadius: 50,
+                      }
+                    ]} 
+                  />
+                )}
+                
                 {(() => {
                   const SVGComponent = getSVGComponent(
                     userProfile.customProfile.animalType,
                     userProfile.customProfile.animalColor
                   );
-                  return SVGComponent ? <SVGComponent width={75} height={75} /> : null;
+                  return SVGComponent ? <SVGComponent width={85} height={85} /> : null;
                 })()}
+                
+                {/* Premium glow effect */}
+                <MotiView
+                  style={styles.glowRing}
+                  animate={{
+                    opacity: [0.3, 0.7, 0.3],
+                    scale: [1, 1.1, 1],
+                  }}
+                  transition={{
+                    type: 'timing',
+                    duration: 3000,
+                    repeat: Infinity,
+                  }}
+                >
+                  <View style={[styles.innerGlow, { borderColor: colors.primary + '40' }]} />
+                </MotiView>
+                
+                {/* Floating particles */}
+                <MotiView
+                  style={styles.particleContainer}
+                  animate={{
+                    rotate: ['0deg', '360deg'],
+                  }}
+                  transition={{
+                    type: 'timing',
+                    duration: 20000,
+                    repeat: Infinity,
+                  }}
+                >
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <MotiView
+                      key={index}
+                      style={[
+                        styles.particle,
+                        {
+                          transform: [{ rotate: `${index * 60}deg` }],
+                          backgroundColor: colors.accent,
+                        }
+                      ]}
+                      animate={{
+                        opacity: [0, 1, 0],
+                        scale: [0.5, 1, 0.5],
+                      }}
+                      transition={{
+                        type: 'timing',
+                        duration: 2000,
+                        repeat: Infinity,
+                        delay: index * 333,
+                      }}
+                    />
+                  ))}
+                </MotiView>
               </View>
             </MotiView>
           ) : (
-            <Image 
-              source={{ uri: user.imageUrl }}
-              style={[styles.profileImage, { borderColor: colors.primaryLight }]}
-            />
+            <Image source={{ uri: user.imageUrl }} style={[styles.profileImage, { borderColor: colors.primaryLight }]} />
           )}
         </TouchableOpacity>
         
@@ -223,21 +309,27 @@ export default function Profile() {
           <ActivityIndicator size="large" color={colors.primary} />
         ) : (
           <>
-            <StatItem 
-              value={stats.totalWorkouts} 
-              label="Workouts Created" 
-              icon="barbell-outline"
-            />
-            <StatItem 
-              value={stats.favorites} 
-              label="Favorites" 
-              icon="heart-outline"
-            />
-            <StatItem 
-              value={stats.completedWorkouts} 
-              label="Completed" 
-              icon="checkmark-circle-outline"
-            />
+            <View style={styles.statItemWrapper}>
+              <StatItem 
+                value={stats.totalWorkouts} 
+                label="Workouts Created" 
+                icon="barbell-outline"
+              />
+            </View>
+            <View style={styles.statItemWrapper}>
+              <StatItem 
+                value={stats.favorites} 
+                label="Favorites" 
+                icon="heart-outline"
+              />
+            </View>
+            <View style={styles.statItemWrapper}>
+              <StatItem 
+                value={stats.completedWorkouts} 
+                label="Completed" 
+                icon="checkmark-circle-outline"
+              />
+            </View>
           </>
         )}
       </View>
@@ -354,8 +446,16 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between', // Changed from space-around
+    alignItems: 'center',
     paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl, // Add horizontal padding for symmetry
+    marginHorizontal: Spacing.md, // Add margin for better edge spacing
+  },
+  statItemWrapper: {
+    flex: 1, // Equal width distribution
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   signOutButton: {
     flexDirection: 'row',
@@ -389,5 +489,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     display: 'flex',
+  },
+  superGrandProfileContainer: {
+    borderWidth: 3, // Increased from 1.5
+    shadowOffset: {
+      width: 0,
+      height: 8, // Increased shadow
+    },
+    shadowOpacity: 0.3, // Increased opacity
+    shadowRadius: 20, // Increased radius
+    elevation: 10, // Increased elevation
+  },
+  glowRing: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    borderRadius: 60, // Larger than profile image
+  },
+  innerGlow: {
+    flex: 1,
+    borderRadius: 60,
+    borderWidth: 2,
+  },
+  particleContainer: {
+    position: 'absolute',
+    top: -30,
+    left: -30,
+    right: -30,
+    bottom: -30,
+  },
+  particle: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    top: 15,
+    left: '50%',
+    marginLeft: -2,
   },
 });

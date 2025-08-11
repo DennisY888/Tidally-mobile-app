@@ -30,6 +30,7 @@ import { useActiveWorkout } from '../../context/WorkoutDetailContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserProfile } from '../../context/UserProfileContext';
 import { getSVGComponent, adaptColorForDarkMode } from '../../constants/ProfileIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 
 /**
@@ -181,11 +182,12 @@ export default function Home() {
             {userProfile?.customProfile?.useCustom ? (
               <MotiView
                 animate={{
-                  scale: [1, 1.05, 1],
+                  scale: [1, 1.08, 1],
+                  rotate: ['0deg', '2deg', '-2deg', '0deg'],
                 }}
                 transition={{
                   type: 'timing',
-                  duration: 2500,
+                  duration: 3000,
                   repeat: Infinity,
                 }}
               >
@@ -193,23 +195,65 @@ export default function Home() {
                   style={[
                     styles.profileImageCustom,
                     styles.premiumProfileButton,
+                    styles.grandProfileButton,
                     { 
-                      backgroundColor: isDark ? 
-                        adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
-                        userProfile.customProfile.backgroundColor,
-                      borderColor: colors.primary + '30', // Subtle border
+                      borderColor: colors.primary + '50',
                       shadowColor: colors.primary,
-                      ...Shadows[isDark ? 'dark' : 'light'].small, // Reduced shadow for home
+                      ...Shadows[isDark ? 'dark' : 'light'].large,
                     }
                   ]}
                 >
+                  {/* Conditional background rendering */}
+                  {userProfile.customProfile.backgroundType === 'gradient' && userProfile.customProfile.gradientColors ? (
+                    <LinearGradient
+                      colors={
+                        isDark 
+                          ? userProfile.customProfile.gradientColors.map(color => adaptColorForDarkMode(color))
+                          : userProfile.customProfile.gradientColors
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  ) : (
+                    <View 
+                      style={[
+                        StyleSheet.absoluteFillObject,
+                        {
+                          backgroundColor: isDark ? 
+                            adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
+                            userProfile.customProfile.backgroundColor,
+                        }
+                      ]} 
+                    />
+                  )}
+                  
                   {(() => {
                     const SVGComponent = getSVGComponent(
                       userProfile.customProfile.animalType,
                       userProfile.customProfile.animalColor
                     );
-                    return SVGComponent ? <SVGComponent width={40} height={40} /> : null;
+                    return SVGComponent ? <SVGComponent width={45} height={45} /> : null;
                   })()}
+                  
+                  {/* Sparkle effect */}
+                  <MotiView
+                    style={styles.sparkleContainer}
+                    animate={{
+                      opacity: [0, 1, 0],
+                      scale: [0.8, 1.2, 0.8],
+                    }}
+                    transition={{
+                      type: 'timing',
+                      duration: 2000,
+                      repeat: Infinity,
+                      delay: 1000,
+                    }}
+                  >
+                    <View style={[styles.sparkle, styles.sparkle1]} />
+                    <View style={[styles.sparkle, styles.sparkle2]} />
+                    <View style={[styles.sparkle, styles.sparkle3]} />
+                  </MotiView>
                 </View>
               </MotiView>
             ) : user?.imageUrl ? (
@@ -500,5 +544,46 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 6,
     elevation: 4,
+  },
+  grandProfileButton: {
+    borderWidth: 2, // Increased from 1.5
+    shadowOffset: {
+      width: 0,
+      height: 6, // Increased shadow
+    },
+    shadowOpacity: 0.25, // Increased from 0.15
+    shadowRadius: 15, // Increased from 12
+    elevation: 8, // Increased from 6
+  },
+  sparkleContainer: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+  },
+  sparkle: {
+    position: 'absolute',
+    backgroundColor: colors.accent,
+    borderRadius: 1,
+  },
+  sparkle1: {
+    width: 2,
+    height: 8,
+    top: 6,
+    left: 9,
+  },
+  sparkle2: {
+    width: 8,
+    height: 2,
+    top: 9,
+    left: 6,
+  },
+  sparkle3: {
+    width: 2,
+    height: 2,
+    top: 4,
+    left: 4,
+    borderRadius: 1,
   },
 });

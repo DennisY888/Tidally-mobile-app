@@ -1,4 +1,4 @@
-// Import all 24 SVG files as React components
+// constants/ProfileIcons.js
 import BlueOctopus from '../assets/profile-icons/blueoctopus.svg';
 import BlueShark from '../assets/profile-icons/blueshark.svg';
 import BlueTurtle from '../assets/profile-icons/blueturtle.svg';

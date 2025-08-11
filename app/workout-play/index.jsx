@@ -42,11 +42,9 @@ export default function WorkoutPlay() {
 
 
   useEffect(() => {
-    // Track current timer state for remaining time calculation
     const currentExercise = sessionExercises[currentExerciseIndex];
     if (currentExercise && currentExercise.time && currentExercise.isTimerActive) {
         const interval = setInterval(() => {
-            // This will trigger remaining time recalculation
             setCurrentTimerLeft(prev => prev + 1);
         }, 1000);
         return () => clearInterval(interval);
@@ -132,7 +130,7 @@ export default function WorkoutPlay() {
 
   const renderHeader = () => (
     <View className="mb-6 px-4 pt-4">
-      <View className="flex-row items-center justify-between mb-2">
+      <View className="flex-row items-center justify-between mb-2 mt-4">
         <Text className="text-3xl font-bold w-4/5" style={{ color: colors.text }} numberOfLines={2}>{workout.title}</Text>
         <TouchableOpacity onPress={handleExit} className="flex-row items-center px-3 py-1 rounded-full border" style={{ backgroundColor: colors.background, borderColor: colors.divider }}>
           <X size={14} color={colors.primary} />

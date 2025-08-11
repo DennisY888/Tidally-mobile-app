@@ -299,6 +299,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       ...Shadows.small,
     },
     backButton: {
+      marginTop: Spacing.lg,
       width: 44,
       height: 44,
       borderRadius: 22,
@@ -307,6 +308,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       backgroundColor: colors.backgroundSecondary,
     },
     headerTitle: {
+      marginTop: Spacing.lg,
       ...Typography.title1,
       color: colors.text,
       flex: 1,

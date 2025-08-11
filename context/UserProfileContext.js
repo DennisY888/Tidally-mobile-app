@@ -1,3 +1,5 @@
+// context/UserProfileContext.js
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useUser } from '@clerk/clerk-expo';
 import { doc, onSnapshot } from 'firebase/firestore';
