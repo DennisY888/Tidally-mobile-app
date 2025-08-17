@@ -15,12 +15,13 @@ import * as Haptics from 'expo-haptics';
 
 import { WorkoutService } from '../../services/WorkoutService';
 import { Colors, Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
-import MarkFav from './../../components/MarkFav';
+import MarkFav from '../MarkFav';
 import { useActiveWorkout } from '../../context/WorkoutDetailContext';
 import { useTheme } from '../../context/ThemeContext';
+import ActionModal from '../UI/ActionModal';
 
 
-export default function Workout({ workout, layout = 'row' }) {
+export default function Workout({ workout, layout = "row" }) {
 
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
@@ -29,6 +30,7 @@ export default function Workout({ workout, layout = 'row' }) {
   const { setActiveWorkout } = useActiveWorkout();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
   
 
   // Get the difficulty level based on estimated time 
@@ -72,21 +74,29 @@ export default function Workout({ workout, layout = 'row' }) {
 
   const handleLongPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    Alert.alert(
-      "Workout Options",
-      `What would you like to do with "${workout?.title}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: handleDeleteWorkout
-        }
-      ]
-    );
+    setShowActionModal(true);
+  }, []);
+
+
+  const handleEditWorkout = useCallback(async (newName) => {
+    try {
+      const success = await WorkoutService.updateWorkoutTitle(
+        workout.id,
+        newName,
+        workout.user?.email
+      );
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Alert.alert("Error", "Failed to update workout name.");
+      }
+    } catch (error) {
+      console.error("Error updating workout:", error);
+      Alert.alert("Error", "Failed to update workout name.");
+    }
   }, [workout]);
   
+
   const handleDeleteWorkout = useCallback(async () => {
     Alert.alert(
       "Delete Workout",
@@ -157,7 +167,7 @@ export default function Workout({ workout, layout = 'row' }) {
             />
           ) : (
             <View style={styles.placeholderImage}>
-              <Ionicons name="fitness" size={40} color={colors.textTertiary} /> {/* ✅ USE THEME COLOR */}
+              <Ionicons name="fitness" size={40} color={colors.textTertiary} /> 
             </View>
           )}
           
@@ -177,7 +187,6 @@ export default function Workout({ workout, layout = 'row' }) {
           </View>
         </View>
         
-        {/* Workout Info */}
         <View style={[
           styles.infoContainer,
           isRowLayout ? styles.rowInfo : styles.gridInfo
@@ -187,20 +196,30 @@ export default function Workout({ workout, layout = 'row' }) {
           </Text>
           
           <View style={styles.statsContainer}>
-            {/* Duration */}
             <View style={styles.statItem}>
-              <Ionicons name="time-outline" size={14} color={colors.primary} /> {/* ✅ USE THEME COLOR */}
-              <Text style={styles.statText}>{workout?.est_time || '0'} min</Text>
+              <Ionicons name="time-outline" size={14} color={colors.primary} /> 
+              <Text style={styles.statText}>{`${workout?.est_time || '0'} min`}</Text>
             </View>
             
-            {/* Exercise count */}
             <View style={styles.statItem}>
-              <Ionicons name="barbell-outline" size={14} color={colors.primary} /> {/* ✅ USE THEME COLOR */}
-              <Text style={styles.statText}>{exerciseCount || 0} exercises</Text>
+              <Ionicons name="barbell-outline" size={14} color={colors.primary} /> 
+              <Text style={styles.statText}>{`${exerciseCount || 0} exercises`}</Text>
             </View>
           </View>
         </View>
       </Pressable>
+
+      <ActionModal
+        visible={showActionModal}
+        title="Workout Options"
+        message="What would you like to do with this workout?"
+        itemName={workout?.title}
+        onClose={() => setShowActionModal(false)}
+        onEdit={handleEditWorkout}
+        onDelete={handleDeleteWorkout}
+        showEdit={true}
+        showDelete={true}
+      />
     </Animated.View>
   );
 }

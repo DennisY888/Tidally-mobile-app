@@ -12,6 +12,11 @@ import * as Haptics from 'expo-haptics';
 import { WorkoutService } from '../../services/WorkoutService';
 import NewCategoryForm from '../Forms/NewCategoryForm';
 import { useTheme } from '../../context/ThemeContext';
+import { Dimensions, ScrollView } from 'react-native';
+
+
+  const screenWidth = Dimensions.get('window').width;
+  const twoRowsHeight = (screenWidth * 0.33333) * 2;
 
 
 export default function Folder({ category, user }) {
@@ -172,6 +177,7 @@ export default function Folder({ category, user }) {
         </TouchableOpacity>
     );
   };
+
   
   return (
     <View style={styles.wrapper}>
@@ -201,9 +207,9 @@ export default function Folder({ category, user }) {
           ))}
         </View>
       ) : categoryList.length > 0 ? (
-        <View style={styles.gridContainer}>
-          {categoryList.map((item, index) => renderPremiumCategoryItem(item, index))}
-        </View>
+          <View style={styles.gridContainer}>
+            {categoryList.map((item, index) => renderPremiumCategoryItem(item, index))}
+          </View>
       ) : (
         !showCreateForm && (
           <View style={styles.emptyContainer}>
@@ -214,6 +220,7 @@ export default function Folder({ category, user }) {
     </View>
   );
 }
+
 
 const getStyles = (colors, isDark) => StyleSheet.create({
     wrapper: {

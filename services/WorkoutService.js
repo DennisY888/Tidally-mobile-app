@@ -244,6 +244,83 @@ searchWorkouts: async (searchTerm) => {
 
 
   /**
+   * Update workout title
+   * @param {string} workoutId - ID of workout to update
+   * @param {string} newTitle - New title
+   * @param {string} userEmail - User email for security
+   * @returns {Promise<boolean>} Success status
+   */
+  updateWorkoutTitle: async (workoutId, newTitle, userEmail) => {
+    try {
+      const workoutQuery = query(
+        collection(db, 'Routines'),
+        where('id', '==', workoutId),
+        where('user.email', '==', userEmail)
+      );
+      const workoutSnapshot = await getDocs(workoutQuery);
+      
+      if (workoutSnapshot.empty) return false;
+      
+      const docRef = doc(db, 'Routines', workoutSnapshot.docs[0].id);
+      await updateDoc(docRef, {
+        title: newTitle,
+        lastUpdated: new Date()
+      });
+      
+      return true;
+    } catch (error) {
+      console.error(`Error updating workout title:`, error);
+      return false;
+    }
+  },
+
+  
+  /**
+   * Update category name
+   * @param {string} oldName - Current category name
+   * @param {string} newName - New category name  
+   * @param {string} userEmail - User email for security
+   * @returns {Promise<boolean>} Success status
+   */
+  updateCategoryName: async (oldName, newName, userEmail) => {
+    try {
+      // Update category document
+      const categoryQuery = query(
+        collection(db, 'Category'),
+        where('name', '==', oldName),
+        where('userEmail', '==', userEmail)
+      );
+      const categorySnapshot = await getDocs(categoryQuery);
+      
+      if (categorySnapshot.empty) return false;
+      
+      // Update category name
+      const categoryDoc = categorySnapshot.docs[0];
+      await updateDoc(categoryDoc.ref, { name: newName });
+      
+      // Update all workouts in this category
+      const workoutsQuery = query(
+        collection(db, 'Routines'),
+        where('category', '==', oldName),
+        where('user.email', '==', userEmail)
+      );
+      const workoutsSnapshot = await getDocs(workoutsQuery);
+      
+      const batch = writeBatch(db);
+      workoutsSnapshot.docs.forEach(doc => {
+        batch.update(doc.ref, { category: newName });
+      });
+      await batch.commit();
+      
+      return true;
+    } catch (error) {
+      console.error(`Error updating category name:`, error);
+      return false;
+    }
+  },
+
+
+  /**
    * Delete a category and handle workouts in that category
    * 
    * @param {string} categoryName - Name of the category to delete
@@ -266,7 +343,7 @@ searchWorkouts: async (searchTerm) => {
         return false;
       }
       
-      // Update all workouts in this category
+      // Find all workouts in this category
       const workoutsQuery = query(
         collection(db, 'Routines'),
         where('category', '==', categoryName),
@@ -274,10 +351,10 @@ searchWorkouts: async (searchTerm) => {
       );
       const workoutsSnapshot = await getDocs(workoutsQuery);
       
-      // Batch update workouts to new category
+      // Delete all workouts in this category
       const batch = writeBatch(db);
       workoutsSnapshot.docs.forEach(doc => {
-        batch.update(doc.ref, { category: reassignCategory });
+        batch.delete(doc.ref);
       });
       await batch.commit();
       

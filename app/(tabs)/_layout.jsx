@@ -37,13 +37,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="heart" size={24} color={color} />
         }}
       />
-      <Tabs.Screen name='profile'
-        options={{
-          title:'Profile',
-          headerShown:false,
-          tabBarIcon:({color}) => <Ionicons name="people-circle" size={24} color={color} />
-        }}
-      />
       <Tabs.Screen name='resume'
         options={{
           title:'Resume',

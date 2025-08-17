@@ -21,19 +21,40 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
   const { user } = useUser();
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   
+  
   /**
    * Share the workout with others
    */
   const handleShare = async () => {
-    try {
+  try {
+      // Format exercises with details
+      const exercisesList = workout.exercises?.map((exercise, index) => {
+        const exerciseDetail = exercise.time 
+          ? `${exercise.time}s × ${exercise.sets} sets`
+          : `${exercise.reps} reps × ${exercise.sets} sets`;
+        return `${index + 1}. ${exercise.name} - ${exerciseDetail}`;
+      }).join('\n') || 'No exercises listed';
+
+      const shareMessage = `🏋️ ${workout.title}
+
+  💪 Workout Details:
+  ${exercisesList}
+
+  ⏱️ Estimated Duration: ${workout.est_time || '?'} minutes
+  📂 Category: ${workout.category || 'Uncategorized'}
+
+  📱 Created with Tidally - Your Ultimate Fitness Companion
+  Download Tidally to create and track your own workouts!`;
+
       await Share.share({
-        message: `Check out this awesome workout: ${workout.title} on Tidally app!`,
+        message: shareMessage,
       });
     } catch (error) {
       console.error("Error sharing:", error);
     }
   };
   
+
   /**
    * Navigate to workout play screen
    * @param {Array} exercises - The exercises to use in workout

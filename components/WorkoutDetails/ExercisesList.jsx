@@ -71,7 +71,7 @@ const ExercisesList = ({
         onDragEnd={onDragEnd}
         onDragBegin={onDragStart}
         keyExtractor={(item, index) => `exercise-${index}`}
-        scrollEnabled={false}
+        scrollEnabled={true}
         contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item, drag, isActive, getIndex }) => {
           const index = getIndex();

@@ -61,6 +61,7 @@ export default function Home() {
   const { setActiveWorkout } = useActiveWorkout();
 
   const { userProfile } = useUserProfile();
+  const userName = user?.fullName || user?.firstName || 'User';
 
 
   // Helper function to determine search match context
@@ -84,6 +85,11 @@ export default function Home() {
         setIsSearching(false);
         return;
       }
+      // Add user email check
+      if (!user?.primaryEmailAddress?.emailAddress) {
+        console.log("User email not available, skipping search");
+        return;
+      }
       setIsSearching(true);
       setIsSearchLoading(true);
       try {
@@ -96,7 +102,7 @@ export default function Home() {
         setIsSearchLoading(false);
       }
     }, 300),
-    []
+    [user?.primaryEmailAddress?.emailAddress] // Add user email as dependency
   );
 
   // Handler for search input
@@ -164,7 +170,7 @@ export default function Home() {
       {/* Header */}
       <View style={styles.header}>
       <View style={styles.headerTop}>
-        <Text style={styles.headerTitle}>Tidally</Text>
+        <Text style={styles.headerTitle}>Welcome, {userName}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.actionButton}
@@ -389,6 +395,7 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.xl,
     backgroundColor: colors.backgroundSecondary,
+    color: colors.text,
     shadowColor: colors.shadow, 
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
