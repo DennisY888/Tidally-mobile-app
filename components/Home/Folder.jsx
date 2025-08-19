@@ -1,6 +1,7 @@
-// components/Home/Folder.jsx 
+// components/Home/Folder.jsx
+
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, Animated } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, Animated, Dimensions, ScrollView } from 'react-native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 import { db } from './../../config/FirebaseConfig';
@@ -12,15 +13,22 @@ import * as Haptics from 'expo-haptics';
 import { WorkoutService } from '../../services/WorkoutService';
 import NewCategoryForm from '../Forms/NewCategoryForm';
 import { useTheme } from '../../context/ThemeContext';
-import { Dimensions, ScrollView } from 'react-native';
 
 
-  const screenWidth = Dimensions.get('window').width;
-  const twoRowsHeight = (screenWidth * 0.33333) * 2;
+const { width: screenWidth } = Dimensions.get('window');
+
+const chunkArray = (array, size) => {
+  const chunkedArr = [];
+  let index = 0;
+  while (index < array.length) {
+    chunkedArr.push(array.slice(index, size + index));
+    index += size;
+  }
+  return chunkedArr;
+};
 
 
 export default function Folder({ category, user }) {
-
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
 
@@ -29,12 +37,15 @@ export default function Folder({ category, user }) {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const scaleAnims = useRef(categoryList.map(() => new Animated.Value(1))).current;
+  const [paginatedCategories, setPaginatedCategories] = useState([]);
+  const [isFolderModalVisible, setIsFolderModalVisible] = useState(false);
+  const [activeFolder, setActiveFolder] = useState(null);
   
 
-  // useCallback memoizes the function to prevent unnecessary re-renders.
   const getCategories = useCallback(async () => {
     if (!user?.primaryEmailAddress?.emailAddress) {
       setCategoryList([]);
+      setPaginatedCategories([]);
       setLoading(false);
       return;
     }
@@ -47,6 +58,7 @@ export default function Folder({ category, user }) {
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       setCategoryList(data);
+      setPaginatedCategories(chunkArray(data, 6)); 
     } catch (error) {
       console.error("Error fetching categories:", error);
     } finally {
@@ -55,18 +67,22 @@ export default function Folder({ category, user }) {
   }, [user]);
 
 
+  const handleCategoryLongPress = useCallback((item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setActiveFolder(item);
+    setIsFolderModalVisible(true);
+  }, []);
+
+
   useEffect(() => {
-    // Only set initial category if we have categories and no category is selected
     if (categoryList.length > 0 && !selectedCategory) {
       const firstCategory = categoryList[0].name;
       setSelectedCategory(firstCategory);
-      category(firstCategory); // Propagate to parent
+      category(firstCategory);
     }
   }, [categoryList, selectedCategory, category]);
 
 
-  // useFocusEffect is the correct hook for this job. It re-fetches data
-  // every time the Home tab comes into focus, ensuring data is always fresh.
   useFocusEffect(
     useCallback(() => {
       getCategories();
@@ -76,62 +92,8 @@ export default function Folder({ category, user }) {
 
   const handleCategorySelect = (item) => {
     setSelectedCategory(item.name);
-    category(item.name); // Propagate selection to parent
+    category(item.name);
   };
-
-
-  const handleCategoryLongPress = useCallback((item) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    Alert.alert(
-      "Folder Options",
-      `What would you like to do with "${item.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: () => handleDeleteCategory(item)
-        }
-      ]
-    );
-  }, []);
-  
-  
-  const handleDeleteCategory = useCallback(async (item) => {
-    Alert.alert(
-      "Delete Folder",
-      `Are you sure you want to delete "${item.name}"?\n\nWorkouts in this folder will be moved to "Uncategorized".`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              
-              const success = await WorkoutService.deleteCategory(
-                item.name,
-                user?.primaryEmailAddress?.emailAddress,
-                'Uncategorized'
-              );
-              
-              if (success) {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                getCategories(); // Refresh the categories list
-              } else {
-                Alert.alert("Error", "Failed to delete folder. Please try again.");
-              }
-            } catch (error) {
-              console.error("Error deleting category:", error);
-              Alert.alert("Error", "Failed to delete folder. Please try again.");
-            }
-          }
-        }
-      ]
-    );
-  }, [user, getCategories]);
 
 
   const renderPremiumCategoryItem = (item, index) => {
@@ -152,8 +114,8 @@ export default function Folder({ category, user }) {
             <LinearGradient
               colors={
                 isSelected
-                  ? [colors.primary, colors.secondary] // ✅ USE THEME COLORS
-                  : [colors.background, colors.backgroundSecondary] // ✅ USE THEME COLORS
+                  ? [colors.primary, colors.secondary]
+                  : [colors.background, colors.backgroundSecondary]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -167,7 +129,7 @@ export default function Folder({ category, user }) {
                 )}
               </View>
               <Text 
-                style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : colors.text }]} // ✅ USE THEME COLOR
+                style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : colors.text }]}
                 numberOfLines={2}
               >
                 {item?.name}
@@ -177,7 +139,6 @@ export default function Folder({ category, user }) {
         </TouchableOpacity>
     );
   };
-
   
   return (
     <View style={styles.wrapper}>
@@ -206,10 +167,26 @@ export default function Folder({ category, user }) {
             <View key={`placeholder-${index}`} style={[styles.categoryCard, styles.placeholderContainer]} />
           ))}
         </View>
-      ) : categoryList.length > 0 ? (
-          <View style={styles.gridContainer}>
-            {categoryList.map((item, index) => renderPremiumCategoryItem(item, index))}
-          </View>
+      ) : paginatedCategories.length > 0 ? (
+        <View style={styles.scrollViewContainer}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            contentContainerStyle={styles.scrollViewContent}
+            snapToAlignment="start"
+            snapToInterval={screenWidth}
+          >
+            {paginatedCategories.map((page, pageIndex) => (
+              <View key={`page-${pageIndex}`} style={styles.pageContainer}>
+                <View style={styles.gridContainer}>
+                  {page.map((item, itemIndex) => renderPremiumCategoryItem(item, itemIndex))}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
       ) : (
         !showCreateForm && (
           <View style={styles.emptyContainer}>
@@ -231,7 +208,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: Spacing.md,
+      paddingHorizontal: Spacing.lg,
       marginBottom: Spacing.sm,
     },
     headerText: {
@@ -251,19 +228,27 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       fontFamily: 'outfit-medium',
     },
     formWrapper: {
-      paddingHorizontal: Spacing.md,
+      paddingHorizontal: Spacing.lg,
       marginBottom: Spacing.md,
+    },
+    scrollViewContainer: {
+      marginHorizontal: -Spacing.lg,
+    },
+    scrollViewContent: {
+      paddingHorizontal: Spacing.lg,
+    },
+    pageContainer: {
+      width: screenWidth - (Spacing.lg * 2),
+      marginRight: Spacing.lg * 2,
     },
     gridContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      paddingHorizontal: Spacing.sm,
     },
     categoryCard: {
       width: '33.333%',
       padding: Spacing.sm,
       aspectRatio: 1,
-      transform: [{ scale: 1 }],
     },
     cardGradient: {
       flex: 1,
@@ -296,7 +281,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       borderRadius: BorderRadius.lg,
     },
     emptyContainer: {
-      marginHorizontal: Spacing.md,
+      marginHorizontal: Spacing.lg,
       padding: Spacing.xl,
       alignItems: 'center',
       backgroundColor: colors.backgroundSecondary, 

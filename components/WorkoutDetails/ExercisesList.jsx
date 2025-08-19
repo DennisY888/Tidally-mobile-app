@@ -27,7 +27,8 @@ const ExercisesList = ({
   onDragStart, 
   onExerciseOptions, 
   onAddExercise, 
-  isUpdatingOrder 
+  isUpdatingOrder,
+  simultaneousHandlers
 }) => {
   const { colors, isDark } = useTheme();
   
@@ -71,7 +72,8 @@ const ExercisesList = ({
         onDragEnd={onDragEnd}
         onDragBegin={onDragStart}
         keyExtractor={(item, index) => `exercise-${index}`}
-        scrollEnabled={true}
+        scrollEnabled={false}
+        simultaneousHandlers={simultaneousHandlers}
         contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item, drag, isActive, getIndex }) => {
           const index = getIndex();

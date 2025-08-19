@@ -12,6 +12,7 @@ export default function MarkFav({ workout }) {
   // 2. Determine if the current workout is a favorite
   const isFavorite = favIds.includes(workout.id);
 
+
   const handleToggleFavorite = async () => {
     let newFavIds;
     if (isFavorite) {

@@ -43,6 +43,8 @@ export default function Profile() {
   const { colors, isDark, setTheme, theme } = useTheme();
 
   const navigation = useNavigation()
+
+  const styles = getStyles(colors, isDark);
   
   // State
   const [stats, setStats] = useState({
@@ -160,250 +162,275 @@ export default function Profile() {
   }
   
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Profile Header */}
-      <View style={[styles.profileHeader, { 
-        backgroundColor: colors.background,
-        borderBottomColor: colors.divider
-      }]}>
-        <TouchableOpacity
-          onPress={() => setShowCustomizationModal(true)}
-          activeOpacity={0.8}
-        >
-          {userProfile?.customProfile?.useCustom ? (
-            <MotiView
-              animate={{
-                scale: [1, 1.05, 1],
-                rotateY: ['0deg', '5deg', '-5deg', '0deg'],
-              }}
-              transition={{
-                type: 'timing',
-                duration: 4000,
-                repeat: Infinity,
-              }}
-            >
-              <View 
-                style={[
-                  styles.profileImage,
-                  styles.premiumProfileContainer,
-                  styles.profileImageCentering,
-                  styles.superGrandProfileContainer,
-                  {
-                    borderColor: colors.primary + '60',
-                    shadowColor: colors.primary,
-                    ...Shadows[isDark ? 'dark' : 'light'].large,
-                  }
-                ]}
+    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Header */}
+        <View style={[styles.profileHeader, { 
+          backgroundColor: colors.background,
+          borderBottomColor: colors.divider
+        }]}>
+          <TouchableOpacity
+            onPress={() => setShowCustomizationModal(true)}
+            activeOpacity={0.8}
+          >
+            {userProfile?.customProfile?.useCustom ? (
+              <MotiView
+                animate={{
+                  scale: [1, 1.05, 1],
+                  rotateY: ['0deg', '5deg', '-5deg', '0deg'],
+                }}
+                transition={{
+                  type: 'timing',
+                  duration: 4000,
+                  repeat: Infinity,
+                }}
               >
-                {/* Conditional background rendering */}
-                {userProfile.customProfile.backgroundType === 'gradient' && userProfile.customProfile.gradientColors ? (
-                  <LinearGradient
-                    colors={
-                      isDark 
-                        ? userProfile.customProfile.gradientColors.map(color => adaptColorForDarkMode(color))
-                        : userProfile.customProfile.gradientColors
+                <View 
+                  style={[
+                    styles.profileImage,
+                    styles.premiumProfileContainer,
+                    styles.profileImageCentering,
+                    styles.superGrandProfileContainer,
+                    {
+                      borderColor: colors.primary + '60',
+                      shadowColor: colors.primary,
+                      ...Shadows[isDark ? 'dark' : 'light'].large,
                     }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[StyleSheet.absoluteFillObject, { borderRadius: 50 }]}
-                  />
-                ) : (
-                  <View 
-                    style={[
-                      StyleSheet.absoluteFillObject,
-                      {
-                        backgroundColor: isDark ? 
-                          adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
-                          userProfile.customProfile.backgroundColor,
-                        borderRadius: 50,
+                  ]}
+                >
+                  {/* Conditional background rendering */}
+                  {userProfile.customProfile.backgroundType === 'gradient' && userProfile.customProfile.gradientColors ? (
+                    <LinearGradient
+                      colors={
+                        isDark 
+                          ? userProfile.customProfile.gradientColors.map(color => adaptColorForDarkMode(color))
+                          : userProfile.customProfile.gradientColors
                       }
-                    ]} 
-                  />
-                )}
-                
-                {(() => {
-                  const SVGComponent = getSVGComponent(
-                    userProfile.customProfile.animalType,
-                    userProfile.customProfile.animalColor
-                  );
-                  return SVGComponent ? <SVGComponent width={85} height={85} /> : null;
-                })()}
-                
-                {/* Premium glow effect */}
-                <MotiView
-                  style={styles.glowRing}
-                  animate={{
-                    opacity: [0.3, 0.7, 0.3],
-                    scale: [1, 1.1, 1],
-                  }}
-                  transition={{
-                    type: 'timing',
-                    duration: 3000,
-                    repeat: Infinity,
-                  }}
-                >
-                  <View style={[styles.innerGlow, { borderColor: colors.primary + '40' }]} />
-                </MotiView>
-                
-                {/* Floating particles */}
-                <MotiView
-                  style={styles.particleContainer}
-                  animate={{
-                    rotate: ['0deg', '360deg'],
-                  }}
-                  transition={{
-                    type: 'timing',
-                    duration: 20000,
-                    repeat: Infinity,
-                  }}
-                >
-                  {[0, 1, 2, 3, 4, 5].map((index) => (
-                    <MotiView
-                      key={index}
-                      style={[
-                        styles.particle,
-                        {
-                          transform: [{ rotate: `${index * 60}deg` }],
-                          backgroundColor: colors.accent,
-                        }
-                      ]}
-                      animate={{
-                        opacity: [0, 1, 0],
-                        scale: [0.5, 1, 0.5],
-                      }}
-                      transition={{
-                        type: 'timing',
-                        duration: 2000,
-                        repeat: Infinity,
-                        delay: index * 333,
-                      }}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[StyleSheet.absoluteFillObject, { borderRadius: 50 }]}
                     />
-                  ))}
-                </MotiView>
-              </View>
-            </MotiView>
+                  ) : (
+                    <View 
+                      style={[
+                        StyleSheet.absoluteFillObject,
+                        {
+                          backgroundColor: isDark ? 
+                            adaptColorForDarkMode(userProfile.customProfile.backgroundColor) : 
+                            userProfile.customProfile.backgroundColor,
+                          borderRadius: 50,
+                        }
+                      ]} 
+                    />
+                  )}
+                  
+                  {(() => {
+                    const SVGComponent = getSVGComponent(
+                      userProfile.customProfile.animalType,
+                      userProfile.customProfile.animalColor
+                    );
+                    return SVGComponent ? <SVGComponent width={85} height={85} /> : null;
+                  })()}
+                  
+                  {/* Premium glow effect */}
+                  <MotiView
+                    style={styles.glowRing}
+                    animate={{
+                      opacity: [0.3, 0.7, 0.3],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      type: 'timing',
+                      duration: 3000,
+                      repeat: Infinity,
+                    }}
+                  >
+                    <View style={[styles.innerGlow, { borderColor: colors.primary + '40' }]} />
+                  </MotiView>
+                  
+                  {/* Floating particles */}
+                  <MotiView
+                    style={styles.particleContainer}
+                    animate={{
+                      rotate: ['0deg', '360deg'],
+                    }}
+                    transition={{
+                      type: 'timing',
+                      duration: 20000,
+                      repeat: Infinity,
+                    }}
+                  >
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <MotiView
+                        key={index}
+                        style={[
+                          styles.particle,
+                          {
+                            transform: [{ rotate: `${index * 60}deg` }],
+                            backgroundColor: colors.accent,
+                          }
+                        ]}
+                        animate={{
+                          opacity: [0, 1, 0],
+                          scale: [0.5, 1, 0.5],
+                        }}
+                        transition={{
+                          type: 'timing',
+                          duration: 2000,
+                          repeat: Infinity,
+                          delay: index * 333,
+                        }}
+                      />
+                    ))}
+                  </MotiView>
+                </View>
+              </MotiView>
+            ) : (
+              <Image source={{ uri: user.imageUrl }} style={[styles.profileImage, { borderColor: colors.primaryLight }]} />
+            )}
+          </TouchableOpacity>
+          
+          <MotiView
+            from={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ type: 'timing', duration: 500, delay: 200 }}
+          >
+            <Text style={[styles.profileName, { color: colors.text }]}>{user.fullName}</Text>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>
+              {user.primaryEmailAddress?.emailAddress}
+            </Text>
+          </MotiView>
+        </View>
+        
+        {/* User Stats */}
+        <View style={styles.statsContainer}>
+          {isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} />
           ) : (
-            <Image source={{ uri: user.imageUrl }} style={[styles.profileImage, { borderColor: colors.primaryLight }]} />
+            <>
+              <View style={styles.statItemWrapper}>
+                <StatItem 
+                  value={stats.totalWorkouts} 
+                  label="Workouts Created" 
+                  icon="barbell-outline"
+                />
+              </View>
+              <View style={styles.statItemWrapper}>
+                <StatItem 
+                  value={stats.favorites} 
+                  label="Favorites" 
+                  icon="heart-outline"
+                />
+              </View>
+              <View style={styles.statItemWrapper}>
+                <StatItem 
+                  value={stats.completedWorkouts} 
+                  label="Completed" 
+                  icon="checkmark-circle-outline"
+                />
+              </View>
+            </>
           )}
+        </View>
+        
+        {/* Settings */}
+        <SettingsSection title="Appearance">
+          <SettingsOption
+            icon="moon-outline"
+            title="Dark Mode"
+            type="switch"
+            value={isDark}
+            onPress={handleThemeChange}
+          />
+        </SettingsSection>
+        
+        <SettingsSection title="Account">
+          <SettingsOption
+            icon="notifications-outline"
+            title="Notifications"
+            onPress={() => console.log('Navigate to notifications settings')}
+          />
+          <SettingsOption
+            icon="lock-closed-outline"
+            title="Privacy & Security"
+            onPress={() => console.log('Navigate to privacy settings')}
+          />
+          <SettingsOption
+            icon="shield-checkmark-outline"
+            title="Data & Storage"
+            onPress={() => console.log('Navigate to data settings')}
+          />
+        </SettingsSection>
+        
+        <SettingsSection title="Support">
+          <SettingsOption
+            icon="help-circle-outline"
+            title="Help Center"
+            onPress={() => console.log('Navigate to help center')}
+          />
+          <SettingsOption
+            icon="information-circle-outline"
+            title="About Tidally"
+            onPress={() => console.log('Navigate to about page')}
+          />
+          <SettingsOption
+            icon="mail-outline"
+            title="Contact Us"
+            onPress={() => console.log('Navigate to contact page')}
+          />
+        </SettingsSection>
+        
+        {/* Sign Out Button */}
+        <TouchableOpacity 
+          style={[styles.signOutButton, { backgroundColor: colors.error + '20' }]}
+          onPress={handleLogout}
+        >
+          <Ionicons name="exit-outline" size={22} color={colors.error} />
+          <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
         </TouchableOpacity>
         
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ type: 'timing', duration: 500, delay: 200 }}
-        >
-          <Text style={[styles.profileName, { color: colors.text }]}>{user.fullName}</Text>
-          <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>
-            {user.primaryEmailAddress?.emailAddress}
-          </Text>
-        </MotiView>
-      </View>
-      
-      {/* User Stats */}
-      <View style={styles.statsContainer}>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary} />
-        ) : (
-          <>
-            <View style={styles.statItemWrapper}>
-              <StatItem 
-                value={stats.totalWorkouts} 
-                label="Workouts Created" 
-                icon="barbell-outline"
-              />
-            </View>
-            <View style={styles.statItemWrapper}>
-              <StatItem 
-                value={stats.favorites} 
-                label="Favorites" 
-                icon="heart-outline"
-              />
-            </View>
-            <View style={styles.statItemWrapper}>
-              <StatItem 
-                value={stats.completedWorkouts} 
-                label="Completed" 
-                icon="checkmark-circle-outline"
-              />
-            </View>
-          </>
-        )}
-      </View>
-      
-      {/* Settings */}
-      <SettingsSection title="Appearance">
-        <SettingsOption
-          icon="moon-outline"
-          title="Dark Mode"
-          type="switch"
-          value={isDark}
-          onPress={handleThemeChange}
-        />
-      </SettingsSection>
-      
-      <SettingsSection title="Account">
-        <SettingsOption
-          icon="notifications-outline"
-          title="Notifications"
-          onPress={() => console.log('Navigate to notifications settings')}
-        />
-        <SettingsOption
-          icon="lock-closed-outline"
-          title="Privacy & Security"
-          onPress={() => console.log('Navigate to privacy settings')}
-        />
-        <SettingsOption
-          icon="shield-checkmark-outline"
-          title="Data & Storage"
-          onPress={() => console.log('Navigate to data settings')}
-        />
-      </SettingsSection>
-      
-      <SettingsSection title="Support">
-        <SettingsOption
-          icon="help-circle-outline"
-          title="Help Center"
-          onPress={() => console.log('Navigate to help center')}
-        />
-        <SettingsOption
-          icon="information-circle-outline"
-          title="About Tidally"
-          onPress={() => console.log('Navigate to about page')}
-        />
-        <SettingsOption
-          icon="mail-outline"
-          title="Contact Us"
-          onPress={() => console.log('Navigate to contact page')}
-        />
-      </SettingsSection>
-      
-      {/* Sign Out Button */}
-      <TouchableOpacity 
-        style={[styles.signOutButton, { backgroundColor: colors.error + '20' }]}
-        onPress={handleLogout}
-      >
-        <Ionicons name="exit-outline" size={22} color={colors.error} />
-        <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
-      </TouchableOpacity>
-      
-      {/* App Version */}
-      <Text style={[styles.versionText, { color: colors.textTertiary }]}>
-        Tidally v1.0.0
-      </Text>
+        {/* App Version */}
+        <Text style={[styles.versionText, { color: colors.textTertiary }]}>
+          Tidally v1.0.0
+        </Text>
 
-      <ProfileCustomizationModal
-        visible={showCustomizationModal}
-        onClose={() => setShowCustomizationModal(false)}
-      />
-    </ScrollView>
+        <ProfileCustomizationModal
+          visible={showCustomizationModal}
+          onClose={() => setShowCustomizationModal(false)}
+        />
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.backButton, { backgroundColor: colors.background }]}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="arrow-back-outline" size={28} color={colors.text} />
+      </TouchableOpacity>
+
+      
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, isDark) => StyleSheet.create({
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: Spacing.lg,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.small, // Using our design system for consistency
+    shadowColor: colors.shadow,
+  },
   container: {
     flex: 1,
   },

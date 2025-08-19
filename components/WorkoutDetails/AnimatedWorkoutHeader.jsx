@@ -1,46 +1,36 @@
-// components/WorkoutDetails/AnimatedWorkoutHeader.jsx
 import React from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated from 'react-native-reanimated'; // Use reanimated
 import { Typography } from '../../constants/Colors';
 
 /**
- * Animated header for workout details with image and title
- * 
+ * Reanimated header for workout details with image and title
+ *
  * @param {Object} props - Component props
  * @param {Object} props.workout - The workout data
- * @param {Animated.Value} props.headerHeight - Animation value for header height
- * @param {Animated.Value} props.headerOpacity - Animation value for header opacity
- * @param {Animated.Value} props.headerTitleOpacity - Animation value for title opacity
+ * @param {Object} props.animatedHeaderStyle - Reanimated style for header height
+ * @param {Object} props.animatedImageStyle - Reanimated style for image opacity
+ * @param {Object} props.animatedTitleStyle - Reanimated style for title opacity
  * @returns {React.ReactNode}
  */
-const AnimatedWorkoutHeader = ({ 
-  workout, 
-  headerHeight, 
-  headerOpacity, 
-  headerTitleOpacity 
+const AnimatedWorkoutHeader = ({
+  workout,
+  animatedHeaderStyle,
+  animatedImageStyle,
+  animatedTitleStyle,
 }) => {
   return (
-    <Animated.View style={[styles.header, { height: headerHeight }]}>
+    <Animated.View style={[styles.header, animatedHeaderStyle]}>
       <Animated.Image
         source={{ uri: workout?.imageUrl }}
-        style={[
-          styles.headerImage,
-          { opacity: headerOpacity }
-        ]}
+        style={[styles.headerImage, animatedImageStyle]}
       />
-      
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.7)']}
         style={styles.headerGradient}
       />
-      
-      <Animated.View 
-        style={[
-          styles.headerTitleContainer,
-          { opacity: headerTitleOpacity }
-        ]}
-      >
+      <Animated.View style={[styles.headerTitleContainer, animatedTitleStyle]}>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {workout.title}
         </Text>
@@ -49,6 +39,7 @@ const AnimatedWorkoutHeader = ({
   );
 };
 
+// Styles remain exactly the same
 const styles = StyleSheet.create({
   header: {
     position: 'absolute',

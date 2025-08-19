@@ -5,55 +5,60 @@ import { useTheme } from '../../context/ThemeContext';
 import { Play, Pause } from 'lucide-react-native';
 import { AppState } from 'react-native';
 
-const NewTimer = ({ duration, isRunning, onComplete, onToggleTimer, currentSet, totalSets }) => {
+// Accept the new isPaused prop
+const NewTimer = ({ duration, isRunning, isPaused, onComplete, onToggleTimer, currentSet, totalSets }) => {
   const { colors } = useTheme();
   const [timeLeft, setTimeLeft] = useState(duration);
 
-
-  const intervalRef = useRef(null);
-  const startTimeRef = useRef(null);
+  // --- MINIMAL ROOT FIX: NEW TIMER LOGIC ---
   const appState = useRef(AppState.currentState);
-  const backgroundTimeRef = useRef(null); 
+  const backgroundTimeRef = useRef(null);
 
+  // Effect 1: Reset timeLeft ONLY when the set or duration changes.
+  // This is unchanged but its isolation is now more important.
   useEffect(() => {
     setTimeLeft(duration);
   }, [duration, currentSet]);
 
+  // Effect 2: Manage the countdown interval based on the correct running state.
   useEffect(() => {
-    if (!isRunning) {
-      clearInterval(intervalRef.current);
-      return;
+    // The true running state is when the timer is active AND not paused.
+    const actuallyRunning = isRunning && !isPaused;
+
+    // If the timer is not in a running state, do nothing.
+    if (!actuallyRunning || timeLeft <= 0) {
+      return; // This will also allow the cleanup to run and stop any existing timer.
     }
 
-    startTimeRef.current = Date.now();
+    const interval = setInterval(() => {
+      setTimeLeft(prevTime => {
+        const newTime = prevTime - 1;
+        if (newTime <= 0) {
+          clearInterval(interval);
+          onComplete();
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
 
-    intervalRef.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      const newTimeLeft = duration - elapsed;
+    // The cleanup function is critical: it stops the timer when `actuallyRunning` becomes false.
+    return () => clearInterval(interval);
+  }, [isRunning, isPaused, timeLeft]); // Depends on the full state to correctly start/stop.
 
-      setTimeLeft(newTimeLeft);
-
-      if (newTimeLeft <= 0) {
-        clearInterval(intervalRef.current);
-        onComplete();
-      }
-    }, 250); 
-
-    return () => clearInterval(intervalRef.current);
-
-  }, [isRunning, duration]);
-
-
+  // Effect 3: Handle the app going to the background (adapted for new logic).
   useEffect(() => {
     const subscription = AppState.addEventListener("change", nextAppState => {
+      const actuallyRunning = isRunning && !isPaused;
+
       if (appState.current.match(/inactive|background/) && nextAppState === "active") {
-        // App has come to the foreground
-        if (backgroundTimeRef.current && startTimeRef.current) {
-          const inactiveDuration = Date.now() - backgroundTimeRef.current;
-          startTimeRef.current += inactiveDuration; // Adjust start time to account for background time
+        if (backgroundTimeRef.current && actuallyRunning) { // Only adjust if timer was running.
+          const inactiveDuration = Math.round((Date.now() - backgroundTimeRef.current) / 1000);
+          setTimeLeft(prevTime => Math.max(0, prevTime - inactiveDuration));
         }
-      } else if (nextAppState.match(/inactive|background/)) {
-        // App is going to the background
+        backgroundTimeRef.current = null;
+      } 
+      else if (nextAppState.match(/inactive|background/)) {
         backgroundTimeRef.current = Date.now();
       }
       appState.current = nextAppState;
@@ -62,8 +67,8 @@ const NewTimer = ({ duration, isRunning, onComplete, onToggleTimer, currentSet, 
     return () => {
       subscription.remove();
     };
-  }, []);
-
+  }, [isRunning, isPaused]); // Depend on running state.
+  // --- END MINIMAL ROOT FIX ---
 
   const formatTime = (seconds) => {
     const safeSeconds = Math.max(0, seconds);
@@ -73,9 +78,12 @@ const NewTimer = ({ duration, isRunning, onComplete, onToggleTimer, currentSet, 
   };
 
   const progress = duration > 0 ? ((duration - Math.max(0, timeLeft)) / duration) * 100 : 0;
+  // The icon should reflect the `actuallyRunning` state, not just `isRunning`
+  const showPauseIcon = isRunning && !isPaused;
+
   const getTimeColor = () => {
     if (timeLeft <= 0) return colors.success;
-    if (timeLeft < 6 && isRunning) return colors.error;
+    if (timeLeft < 6 && showPauseIcon) return colors.error;
     return colors.text;
   };
 
@@ -90,8 +98,8 @@ const NewTimer = ({ duration, isRunning, onComplete, onToggleTimer, currentSet, 
               </View>
               <Text className="text-6xl font-bold tracking-tighter" style={{ color: getTimeColor() }}>{formatTime(timeLeft)}</Text>
             </View>
-            <TouchableOpacity onPress={onToggleTimer} disabled={timeLeft <= 0} className="w-16 h-16 rounded-full items-center justify-center shadow-lg" style={{ backgroundColor: isRunning ? colors.error + '20' : colors.primary }}>
-              {isRunning ? <Pause size={28} color={colors.error} /> : <Play size={28} color="#FFF" />}
+            <TouchableOpacity onPress={onToggleTimer} disabled={timeLeft <= 0} className="w-16 h-16 rounded-full items-center justify-center shadow-lg" style={{ backgroundColor: showPauseIcon ? colors.error + '20' : colors.primary }}>
+              {showPauseIcon ? <Pause size={28} color={colors.error} /> : <Play size={28} color="#FFF" />}
             </TouchableOpacity>
           </View>
           <View className="flex-row space-x-1">

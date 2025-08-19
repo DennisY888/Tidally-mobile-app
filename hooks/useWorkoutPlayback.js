@@ -1,152 +1,100 @@
 // hooks/useWorkoutPlayback.js
+
 import { useState, useRef, useEffect } from 'react';
 import { Animated, Alert } from 'react-native';
 import { Audio } from 'expo-av';
 import WorkoutSessionService from '../services/WorkoutSessionService';
 
-/**
- * Custom hook for managing workout playback functionality
- * 
- * @param {Object} workout - The workout data
- * @param {boolean} isResuming - Whether we're resuming an existing session
- * @returns {Object} Workout playback state and methods
- */
 export const useWorkoutPlayback = (workout, isResuming = false) => {
-  // Sound effects
   const [completeSound, setCompleteSound] = useState();
   const [startSound, setStartSound] = useState();
   
-  // State for workout session
   const [sessionExercises, setSessionExercises] = useState([]);
-  
-  // Track overall progress
   const [workoutProgress, setWorkoutProgress] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [workoutComplete, setWorkoutComplete] = useState(false);
   
-  // Animation refs
   const progressAnim = useRef(new Animated.Value(0)).current;
   const timerRef = useRef(null);
-  const sessionExercisesRef = useRef([]);
-  
-  // Load session data if resuming, otherwise initialize fresh session
+
+  // --- ROOT FIX: Refs for all state to be saved ---
+  const sessionDataRef = useRef({
+    exercises: [],
+    progress: 0,
+    elapsedTime: 0,
+    isComplete: false,
+  });
+
+  // Keep refs in sync with state
   useEffect(() => {
-    const initializeSession = async () => {
-      if (isResuming) {
-        // First, check if we have valid exercises in the params
-        if (workout.exercises && workout.exercises.length > 0) {
-          // Transform workout exercises to session exercises with tracking properties if needed
-          const resumeExercises = workout.exercises.map(exercise => {
-            // If exercise already has session properties, use them
-            if ('remainingSets' in exercise && 'completedSets' in exercise) {
-              return exercise;
-            }
-            // Otherwise, add session properties
-            return {
-              ...exercise,
-              remainingSets: exercise.sets || 0,
-              completedSets: 0,
-              isTimerActive: false,
-              isPaused: false
-            };
-          });
-          
-          // Ensure progress is a number
-          const progressValue = parseFloat(workout.progress) || 0;
+    sessionDataRef.current.exercises = sessionExercises;
+  }, [sessionExercises]);
 
-          // Ensure elapsedTime is a number
-          const elapsedTimeValue = parseInt(workout.elapsedTime, 10) || 0;
+  useEffect(() => {
+    sessionDataRef.current.progress = workoutProgress;
+  }, [workoutProgress]);
 
-          setSessionExercises(resumeExercises);
-          setWorkoutProgress(progressValue);
-          setElapsedTime(elapsedTimeValue);
-          progressAnim.setValue(progressValue);
-          
-          console.log("Session state updated from params");
-        } else {
-          console.log("⚠️ No valid exercises in params, falling back to stored session");
-          
-          // Fallback to stored session if no exercises in params
-          const savedSession = await WorkoutSessionService.getSessionByWorkoutId(workout.id);
-          
-          if (savedSession && savedSession.exercises && savedSession.exercises.length > 0) {
-            
-            setSessionExercises(savedSession.exercises);
-            setWorkoutProgress(savedSession.progress || 0);
-            setElapsedTime(savedSession.elapsedTime || 0);
-            setWorkoutComplete(savedSession.isComplete || false);
-            progressAnim.setValue(savedSession.progress || 0);
-            
-            console.log("Session state updated from saved session");
-          } else {
-            console.log("❌ No valid saved session found, initializing fresh session");
-            initializeFreshSession();
-          }
-        }
-      } else {
-        initializeFreshSession();
-      }
-    };
+  useEffect(() => {
+    sessionDataRef.current.elapsedTime = elapsedTime;
+  }, [elapsedTime]);
 
+  useEffect(() => {
+    sessionDataRef.current.isComplete = workoutComplete;
+  }, [workoutComplete]);
+  // --- END ROOT FIX ---
+  
 
-    const initializeFreshSession = () => {
-      // Defensive check to ensure workout.exercises is an array
-      const workoutExercises = Array.isArray(workout.exercises) ? workout.exercises : [];
-      
-      // Transform workout exercises to session exercises with tracking properties
-      const initialExercises = workoutExercises.map(exercise => ({
+  useEffect(() => {
+    const initializeSession = () => {
+      const initialExercises = (Array.isArray(workout.exercises) ? workout.exercises : []).map(exercise => ({
         ...exercise,
-        remainingSets: exercise.sets || 0,
-        completedSets: 0,
+        // When resuming, these values will be present on the exercise object from params.
+        // When starting fresh, these will be undefined, so we default them.
+        remainingSets: exercise.remainingSets ?? exercise.sets ?? 0,
+        completedSets: exercise.completedSets ?? 0,
+        // Always reset transient state to a clean, predictable start
         isTimerActive: false,
-        isPaused: false
+        isPaused: false,
       }));
       
-      // Important: Set the state directly
+      const progressValue = isResuming ? (parseFloat(workout.progress) || 0) : 0;
+      const elapsedTimeValue = isResuming ? (parseInt(workout.elapsedTime, 10) || 0) : 0;
+
       setSessionExercises(initialExercises);
-    
-      setWorkoutProgress(0);
-      setElapsedTime(0);
-      setWorkoutComplete(false);
-      progressAnim.setValue(0);
-      
+      setWorkoutProgress(progressValue);
+      setElapsedTime(elapsedTimeValue);
+      progressAnim.setValue(progressValue);
     };
 
     initializeSession();
     loadSounds();
     
-    // Start workout timer
-    timerRef.current = setInterval(() => {
+    const timer = setInterval(() => {
       setElapsedTime(prev => prev + 1);
     }, 1000);
+    timerRef.current = timer; // Store ref to the timer itself
     
     return () => {
       unloadSounds();
-      clearInterval(timerRef.current);
-      
-      // Save session state when unmounting
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
       saveSessionState();
     };
-  }, [workout.id, isResuming]);
+  }, [workout.id, isResuming]); // Dependencies are correct
+
+
+
   
-  // Update progress whenever session exercises change
   useEffect(() => {
     updateProgress();
   }, [sessionExercises]);
 
-  useEffect(() => {
-    sessionExercisesRef.current = sessionExercises;
-  }, [sessionExercises]);
-  
-  /**
-   * Save the current session state
-   */
+
+
+  // --- ROOT FIX: saveSessionState now reads exclusively from the ref ---
   const saveSessionState = async () => {
-    // Don't save if workout is complete
-    if (workoutComplete) return;
-    
-    // Use the ref to access the latest exercises
-    const currentExercises = [...sessionExercisesRef.current];
+    if (sessionDataRef.current.isComplete) return;
     
     const sessionData = {
       workoutId: workout.id,
@@ -155,10 +103,10 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
       category: workout.category,
       description: workout.description,
       est_time: workout.est_time,
-      exercises: currentExercises,  // Now using exercises from ref
-      progress: workoutProgress,
-      elapsedTime: elapsedTime,
-      isComplete: workoutComplete,
+      exercises: sessionDataRef.current.exercises,
+      progress: sessionDataRef.current.progress,
+      elapsedTime: sessionDataRef.current.elapsedTime,
+      isComplete: sessionDataRef.current.isComplete,
       lastAccessedAt: new Date().toISOString()
     };
     
@@ -222,45 +170,32 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  /**
-   * Update overall workout progress
-   */
   const updateProgress = () => {
-    if (!sessionExercises.length) return;
+    const currentExercises = sessionDataRef.current.exercises;
+    if (!currentExercises.length) return;
     
-    const totalSets = sessionExercises.reduce((total, ex) => total + parseInt(ex.sets || 0), 0);
-    if (totalSets === 0) return;
+    const totalSets = currentExercises.reduce((total, ex) => total + parseInt(ex.sets || 0), 0);
+    if (totalSets === 0) {
+      setWorkoutProgress(1); // If no sets, consider it 100% complete
+      return;
+    }
     
-    const completedSets = sessionExercises.reduce((total, ex) => total + (ex.completedSets || 0), 0);
-    
-    const newProgress = (completedSets / totalSets);
+    const completedSets = currentExercises.reduce((total, ex) => total + (ex.completedSets || 0), 0);
+    const newProgress = completedSets / totalSets;
     setWorkoutProgress(newProgress);
     
-    // Animate progress bar
-    Animated.timing(progressAnim, {
-      toValue: newProgress,
-      duration: 300,
-      useNativeDriver: false
-    }).start();
+    Animated.timing(progressAnim, { toValue: newProgress, duration: 300, useNativeDriver: false }).start();
     
-    // Check if workout is complete
     if (completedSets === totalSets) {
       setWorkoutComplete(true);
       playSound(completeSound);
       clearInterval(timerRef.current);
-      showCompletionAlert();
     }
   };
   
-  /**
-   * Handle set completion
-   * @param {string} exerciseName - Name of the exercise
-   */
   const handleSetComplete = (exerciseName) => {
-    console.log(`Completing set for exercise: ${exerciseName}`);
-
     setSessionExercises(current => {
-      const updatedExercises = current.map(ex =>
+      return current.map(ex =>
         ex.name === exerciseName ? {
           ...ex,
           remainingSets: Math.max(0, ex.remainingSets - 1),
@@ -268,9 +203,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
           isTimerActive: false
         } : ex
       );
-      
-      console.log(`Updated exercises after completing set. Count: ${updatedExercises.length}`);
-      return updatedExercises;
     });
   };
   
@@ -308,21 +240,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
   };
   
   /**
-   * Show workout completion alert
-   */
-  const showCompletionAlert = () => {
-    setTimeout(() => {
-      Alert.alert(
-        "Workout Complete!",
-        `Great job! You've completed the workout in ${formatTime(elapsedTime)}.`,
-        [
-          { text: "Save and Exit", onPress: () => {} }
-        ]
-      );
-    }, 500);
-  };
-  
-  /**
    * Manually save the session state
    */
   const saveSession = async () => {
@@ -341,6 +258,6 @@ export const useWorkoutPlayback = (workout, isResuming = false) => {
     playSound,
     completeSound,
     startSound,
-    saveSession  // New function to manually save session
+    saveSession
   };
 };

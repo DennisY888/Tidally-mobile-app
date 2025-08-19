@@ -265,63 +265,6 @@ export default function AddNewWorkout() {
     }
   };
 
-
-    /**
-   * Handles the creation of a new category.
-   * This function is triggered by the "New" button.
-   */
-    const handleAddNewCategory = () => {
-      // Alert.prompt provides a native dialog for text input, a great UX choice.
-      Alert.prompt(
-        "New Category",
-        "Enter a name for your new folder:",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Create",
-            onPress: async (categoryName) => {
-              // 1. Validate: Ensure the input is not empty.
-              if (!categoryName || categoryName.trim() === '') {
-                showToast("Category name cannot be empty.");
-                return;
-              }
-              const trimmedName = categoryName.trim();
-              
-              // 2. Validate: Prevent duplicate categories (case-insensitive).
-              if (categoryList.some(cat => cat.name.toLowerCase() === trimmedName.toLowerCase())) {
-                showToast(`Category "${trimmedName}" already exists.`);
-                return;
-              }
-  
-              // 3. Securely write to the database inside a try/catch block.
-              try {
-                const newCategory = {
-                  name: trimmedName,
-                  userEmail: user.primaryEmailAddress.emailAddress, // <-- Critical for security
-                  imageUrl: 'https://img.icons8.com/plasticine/100/folder-invoices.png',
-                };
-                
-                const docRef = await addDoc(collection(db, 'Category'), newCategory);
-  
-                // 4. Provide immediate UI feedback for a responsive feel.
-                const categoryWithId = { ...newCategory, id: docRef.id };
-                setCategoryList(prev => [...prev, categoryWithId]);
-                setSelectedCategory(categoryWithId.name);
-                handleInputChange('category', categoryWithId.name);
-  
-                showToast("Category created successfully!");
-  
-              } catch (error) {
-                console.error("Error creating new category:", error);
-                showToast("Failed to create category.");
-              }
-            },
-          },
-        ],
-        "plain-text"
-      );
-    };
-
   
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
@@ -389,10 +332,6 @@ export default function AddNewWorkout() {
             {/* This new container allows the label and button to sit side-by-side. */}
             <View style={styles.labelContainer}>
               <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
-              <TouchableOpacity onPress={handleAddNewCategory} style={styles.addButton}>
-                <Ionicons name="add-circle" size={22} color={colors.primary} />
-                <Text style={[styles.addButtonText, { color: colors.primary }]}>New</Text>
-              </TouchableOpacity>
             </View>
             <View style={[styles.pickerContainer, { 
               backgroundColor: colors.backgroundSecondary,

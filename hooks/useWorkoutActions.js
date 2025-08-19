@@ -1,5 +1,5 @@
 // hooks/useWorkoutActions.js
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Share, Platform, Alert, ToastAndroid } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { collection, doc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
@@ -21,12 +21,14 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
   const { user } = useUser();
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(null);
   
-  
+
   /**
    * Share the workout with others
    */
-  const handleShare = async () => {
-  try {
+  const handleShare = useCallback(async () => {
+    try {
+      if (!workout) return; // Add a guard clause for safety
+
       // Format exercises with details
       const exercisesList = workout.exercises?.map((exercise, index) => {
         const exerciseDetail = exercise.time 
@@ -49,10 +51,10 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
       await Share.share({
         message: shareMessage,
       });
-    } catch (error) {
+    } catch (error) {      
       console.error("Error sharing:", error);
     }
-  };
+  }, [workout]);
   
 
   /**

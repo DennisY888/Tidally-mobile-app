@@ -75,6 +75,7 @@ const NewExerciseItem = ({ exercise, isActive, isCompleted, onCompleteSet, onAct
                                     <NewTimer 
                                         duration={exercise.time} 
                                         isRunning={exercise.isTimerActive}
+                                        isPaused={exercise.isPaused}
                                         onComplete={() => onCompleteSet(currentSetIndex)}
                                         onToggleTimer={onToggleTimer}
                                         currentSet={currentSetIndex + 1}

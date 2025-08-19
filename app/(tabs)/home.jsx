@@ -5,6 +5,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Alert,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -18,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
 import { debounce } from 'lodash';
 import { MotiView } from 'moti';
+import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '../../context/ThemeContext';
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
@@ -31,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserProfile } from '../../context/UserProfileContext';
 import { getSVGComponent, adaptColorForDarkMode } from '../../constants/ProfileIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import ActionModal from '../../components/UI/ActionModal';
 
 
 /**
@@ -49,6 +52,9 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
 
+  // We need a way to tell the Folder component to refresh its data after a change
+  const [folderUpdateKey, setFolderUpdateKey] = useState(0);
+
   // Hooks
   const insets = useSafeAreaInsets();
   const { user } = useUser();
@@ -62,6 +68,7 @@ export default function Home() {
 
   const { userProfile } = useUserProfile();
   const userName = user?.fullName || user?.firstName || 'User';
+
 
 
   // Helper function to determine search match context
@@ -302,6 +309,7 @@ export default function Home() {
           ) : (
             <>
               <Folder
+                key={folderUpdateKey}
                 category={(value) => {
                   setSelectedCategory(value);
                 }}

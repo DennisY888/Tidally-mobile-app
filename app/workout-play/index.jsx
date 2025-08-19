@@ -33,8 +33,9 @@ export default function WorkoutPlay() {
     workoutComplete,
     handleSetComplete,
     toggleTimer,
-    saveSession
+    saveSession 
   } = useWorkoutPlayback(workout, isResuming);
+
 
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(
     isResuming ? sessionExercises.findIndex(ex => ex.remainingSets > 0) || 0 : 0
@@ -121,7 +122,13 @@ export default function WorkoutPlay() {
 }, [sessionExercises, currentExerciseIndex, currentTimerLeft]);
 
 
-  const handleExit = async () => { if (!workoutComplete) { await saveSession(); } router.back(); };
+  const handleExit = async () => {
+    if (!workoutComplete) {
+      await saveSession();
+    }
+    router.back();
+  };
+
   const onCompleteSet = (exerciseIndex, setIndex) => {
     const exerciseName = sessionExercises[exerciseIndex].name;
     handleSetComplete(exerciseName);

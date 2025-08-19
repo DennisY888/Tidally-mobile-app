@@ -31,17 +31,7 @@ export default function Workout({ workout, layout = "row" }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [isDeleting, setIsDeleting] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
-  
 
-  // Get the difficulty level based on estimated time 
-  const getDifficultyLevel = () => {
-    const time = parseInt(workout?.est_time) || 0;
-    if (time < 20) return { level: 'Beginner', color: colors.success }; // ✅ USE THEME COLOR
-    if (time < 40) return { level: 'Intermediate', color: colors.warning }; // ✅ USE THEME COLOR
-    return { level: 'Advanced', color: colors.error }; // ✅ USE THEME COLOR
-  };
-  
-  const difficulty = getDifficultyLevel();
   
   // Count number of exercises
   const exerciseCount = workout?.exercises?.length || 0;
@@ -175,16 +165,6 @@ export default function Workout({ workout, layout = "row" }) {
           <View style={styles.favButton}>
             <MarkFav workout={workout} />
           </View>
-          
-          {/* Difficulty badge */}
-          <View 
-            style={[
-              styles.difficultyBadge,
-              { backgroundColor: difficulty.color }
-            ]}
-          >
-            <Text style={styles.difficultyText}>{difficulty.level}</Text>
-          </View>
         </View>
         
         <View style={[
@@ -269,20 +249,6 @@ const getStyles = (colors, isDark) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows[isDark ? 'dark' : 'light'].small, // ✅ THEME-AWARE SHADOWS
-  },
-  difficultyBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    backgroundColor: colors.primary, // ✅ DEFAULT THEME COLOR
-  },
-  difficultyText: {
-    ...Typography.caption2,
-    color: '#fff',
-    fontFamily: 'outfit-medium',
   },
   infoContainer: {
     flex: 1,
