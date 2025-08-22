@@ -19,6 +19,7 @@ import { Typography } from '../../constants/Colors';
 import AuthButton from '../../components/Auth/AuthButton';
 import AppLogo from '../../components/Auth/AppLogo';
 import { useLoginAnimations } from '../../hooks/useLoginAnimations';
+import LoginSvg from './../../assets/images/login.svg';
 
 /**
  * Hook to warm up the WebBrowser for faster auth flows
@@ -128,9 +129,9 @@ export default function LoginScreen() {
                 }
               ]}
             >
-              <Image
-                source={require('./../../assets/images/login.png')}
-                resizeMode='contain'
+              <LoginSvg
+                width="100%"
+                height={300}
                 style={styles.loginImage}
               />
             </Animated.View>

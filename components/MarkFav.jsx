@@ -32,7 +32,7 @@ export default function MarkFav({ workout }) {
   }
 
   return (
-    <Pressable onPress={handleToggleFavorite}>
+    <Pressable onPressIn={handleToggleFavorite}>
       {isFavorite ? (
         <AntDesign name="heart" size={24} color="red" />
       ) : (

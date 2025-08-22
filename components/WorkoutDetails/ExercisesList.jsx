@@ -1,42 +1,37 @@
 // components/WorkoutDetails/ExercisesList.jsx
+
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import * as Haptics from 'expo-haptics';
 
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
- * Draggable list of exercises for workout details
- * 
+ * Renders a list of exercises for the workout details screen.
  * @param {Object} props - Component props
  * @param {Array} props.exercises - List of exercises
- * @param {Function} props.onDragEnd - Function to call when drag ends
- * @param {Function} props.onDragStart - Function to call when drag starts
  * @param {Function} props.onExerciseOptions - Function to call for exercise options
  * @param {Function} props.onAddExercise - Function to add a new exercise
  * @param {boolean} props.isUpdatingOrder - Whether order is being updated
  * @returns {React.ReactNode}
  */
-const ExercisesList = ({ 
-  exercises, 
-  onDragEnd, 
-  onDragStart, 
-  onExerciseOptions, 
-  onAddExercise, 
+const ExercisesList = ({
+  exercises,
+  onExerciseOptions,
+  onAddExercise,
   isUpdatingOrder,
-  simultaneousHandlers
+  onReorderPress, 
 }) => {
   const { colors, isDark } = useTheme();
-  
+  const styles = getStyles(colors, isDark);
+
   if (!exercises || exercises.length === 0) {
     return (
       <View style={{ padding: 16 }}>
         <Text style={{ color: colors.textSecondary }}>No exercises found for this workout.</Text>
-        
         {/* Add Exercise Button (Even when empty) */}
         <TouchableOpacity
           style={[styles.addExerciseButton, { marginTop: 20 }]}
@@ -58,25 +53,22 @@ const ExercisesList = ({
 
   return (
     <View>
-      {/* Drag Help Instructions */}
-      <View style={styles.dragHelpContainer}>
-        <Text style={[styles.dragHelpText, { color: colors.textTertiary }]}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.textTertiary} />
-          <Text>{" "}Hold and drag an exercise to reorder</Text>
-        </Text>
+
+      <View style={styles.listHeader}>
+        <Text style={[styles.listHeaderTitle, { color: colors.text }]}>Exercises</Text>
+        <TouchableOpacity style={styles.reorderButton} onPressIn={onReorderPress}>
+          <Ionicons name="swap-vertical" size={20} color={colors.primary} />
+          <Text style={[styles.reorderButtonText, { color: colors.primary }]}>Re-order</Text>
+        </TouchableOpacity>
       </View>
-      
+
       {/* Exercise List */}
-      <DraggableFlatList
+      <FlatList
         data={exercises}
-        onDragEnd={onDragEnd}
-        onDragBegin={onDragStart}
         keyExtractor={(item, index) => `exercise-${index}`}
         scrollEnabled={false}
-        simultaneousHandlers={simultaneousHandlers}
         contentContainerStyle={{ paddingBottom: 40 }}
-        renderItem={({ item, drag, isActive, getIndex }) => {
-          const index = getIndex();
+        renderItem={({ item, index }) => {
           // Ensure item has all required properties to prevent undefined text
           const name = item && item.name ? item.name : "Unnamed Exercise";
           const sets = item && item.sets ? item.sets : 0;
@@ -84,65 +76,50 @@ const ExercisesList = ({
           const time = item && item.time ? item.time : 0;
           
           return (
-            <ScaleDecorator>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onLongPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  drag();
-                }}
-                disabled={isActive || isUpdatingOrder}
-                onPress={() => {
-                    onExerciseOptions(item, index);
-                  }}
-                style={[
-                  styles.exerciseItem,
-                  { backgroundColor: colors.backgroundSecondary },
-                  isActive && styles.draggingItem,
-                  isActive && { backgroundColor: colors.primaryLight }
-                ]}
-              >
-                <View style={[
-                  styles.exerciseIcon, 
-                  { backgroundColor: colors.primaryLight }
-                ]}>
-                  <Ionicons 
-                    name={item.reps ? "barbell-outline" : "timer-outline"} 
-                    size={24} 
-                    color={colors.primary} 
-                  />
-                </View>
-                
-                <View style={styles.exerciseContent}>
-                  <Text style={[styles.exerciseName, { color: colors.text }]}>
-                    {name}
-                  </Text>
-                  <Text style={[styles.exerciseDetails, { color: colors.textSecondary }]}>
-                    {item.reps ? 
-                      `${reps} reps` : 
-                      `${time} seconds`} • {sets} sets
-                  </Text>
-                </View>
-                
-                <View style={styles.exerciseSetContainer}>
-                  <Text style={[styles.exerciseSets, { color: colors.primary }]}>
-                    {sets}
-                  </Text>
-                  <Text style={[styles.exerciseSetsLabel, { color: colors.textSecondary }]}>
-                    sets
-                  </Text>
-                </View>
-        
-                {/* Drag handle indicator */}
-                <View style={styles.dragHandle}>
-                  <Ionicons 
-                    name="menu" 
-                    size={20} 
-                    color={isActive ? colors.primary : colors.textTertiary} 
-                  />
-                </View>
-              </TouchableOpacity>
-            </ScaleDecorator>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              disabled={isUpdatingOrder}
+              // ==================== ROOT FIX START ====================
+              onPressIn={() => {
+                  onExerciseOptions(item, index);
+              }}
+              // ===================== ROOT FIX END =====================
+              style={[
+                styles.exerciseItem,
+                { backgroundColor: colors.backgroundSecondary },
+              ]}
+            >
+              <View style={[
+                styles.exerciseIcon, 
+                { backgroundColor: colors.primaryLight }
+              ]}>
+                <Ionicons 
+                  name={item.reps ? "barbell-outline" : "timer-outline"} 
+                  size={24} 
+                  color={colors.primary} 
+                />
+              </View>
+              
+              <View style={styles.exerciseContent}>
+                <Text style={[styles.exerciseName, { color: colors.text }]}>
+                  {name}
+                </Text>
+                <Text style={[styles.exerciseDetails, { color: colors.textSecondary }]}>
+                  {item.reps ? 
+                    `${reps} reps` : 
+                    `${time} seconds`} • {sets} sets
+                </Text>
+              </View>
+              
+              <View style={styles.exerciseSetContainer}>
+                <Text style={[styles.exerciseSets, { color: colors.primary }]}>
+                  {sets}
+                </Text>
+                <Text style={[styles.exerciseSetsLabel, { color: colors.textSecondary }]}>
+                  sets
+                </Text>
+              </View>
+            </TouchableOpacity>
           );
         }}
       />
@@ -150,7 +127,7 @@ const ExercisesList = ({
       {/* Add Exercise Button */}
       <TouchableOpacity
         style={styles.addExerciseButton}
-        onPress={onAddExercise}
+        onPressIn={onAddExercise}
         disabled={isUpdatingOrder}
       >
         <LinearGradient
@@ -167,7 +144,8 @@ const ExercisesList = ({
   );
 };
 
-const styles = StyleSheet.create({
+
+const getStyles = (colors, isDark) => StyleSheet.create({
   dragHelpContainer: {
     padding: Spacing.sm,
     marginBottom: Spacing.sm,
@@ -238,6 +216,29 @@ const styles = StyleSheet.create({
     ...Typography.headline,
     color: '#fff',
     marginLeft: Spacing.sm,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  listHeaderTitle: {
+    ...Typography.title3,
+    fontFamily: 'outfit-medium',
+  },
+  reorderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: colors.primaryLight,
+    borderRadius: BorderRadius.full,
+  },
+  reorderButtonText: {
+    ...Typography.subhead,
+    fontFamily: 'outfit-medium',
+    marginLeft: Spacing.xs,
   },
 });
 

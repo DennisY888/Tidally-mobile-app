@@ -1,12 +1,10 @@
-// app/workout-details/[id].jsx
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Dimensions, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
   StatusBar,
   Platform,
   Alert,
@@ -31,8 +29,9 @@ import { useWorkoutActions } from '../../hooks/useWorkoutActions';
 import { WorkoutService } from '../../services/WorkoutService';
 import ExerciseActionSheet from '../../components/WorkoutDetails/ExerciseActionSheet';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { useActiveWorkout } from '../../context/WorkoutDetailContext'; 
+import { useActiveWorkout } from '../../context/WorkoutDetailContext';
 import WorkoutSessionService from '../../services/WorkoutSessionService';
+import ReorderExercisesModal from '../../components/WorkoutDetails/ReorderExercisesModal';
 
 
 // Constants
@@ -52,11 +51,12 @@ export default function WorkoutDetails() {
   const bottomSheetRef = useRef(null);
 
   const [workoutExercises, setWorkoutExercises] = useState(workout?.exercises || []);
-  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [isSaving, setSaving] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState(null);
+  const [isReorderModalVisible, setIsReorderModalVisible] = useState(false);
+
 
   // --- REANIMATED LOGIC ---
   const scrollY = useSharedValue(0);
@@ -107,6 +107,29 @@ export default function WorkoutDetails() {
     setSelectedExerciseIndex
   } = useWorkoutActions(workout, workoutExercises, setWorkoutExercises, router);
 
+
+  const handleSaveOrder = async (newlyOrderedExercises) => {
+    // 1. Optimistically update the UI for a seamless experience
+    setWorkoutExercises(newlyOrderedExercises);
+    setIsReorderModalVisible(false); // Close the modal immediately
+
+    // 2. Perform the backend update
+    try {
+      const success = await WorkoutService.updateWorkoutExercises(workout.id, newlyOrderedExercises, new Date());
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Alert.alert("Success", "Your new order has been saved."); // Optional success message
+      } else {
+        throw new Error("Update failed in service.");
+      }
+    } catch (error) {
+      // 3. If backend fails, revert the UI and notify the user
+      setWorkoutExercises(workout.exercises); // Revert to original order
+      Alert.alert("Update Failed", "Could not save your new order. Please try again.");
+    }
+  };
+
+
   const handleStartWorkout = async () => {
     if (!workout) return;
     try {
@@ -131,8 +154,8 @@ export default function WorkoutDetails() {
       `Are you sure you want to delete "${workout.title}"? This action cannot be undone.`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
           onPress: async () => {
             try {
@@ -152,22 +175,6 @@ export default function WorkoutDetails() {
     );
   }, [workout, router]);
 
-  const handleDragEnd = async ({ data }) => {
-    if (!workout) return;
-    setWorkoutExercises(data);
-    setIsUpdatingOrder(true);
-    try {
-      const success = await WorkoutService.updateWorkoutExercises(workout.id, data, new Date());
-      if (!success) throw new Error("Update failed");
-    } catch (error) {
-      console.error('Error updating exercise order:', error);
-      setWorkoutExercises(workout.exercises);
-      Alert.alert("Update Failed", "Could not save your new order.");
-    } finally {
-      setIsUpdatingOrder(false);
-    }
-  };
-
   const handleExerciseOptions = (exercise, index) => {
     setSelectedExerciseIndex(index);
     bottomSheetRef.current?.present(exercise, index);
@@ -175,27 +182,26 @@ export default function WorkoutDetails() {
 
   const handleEdit = (exercise, index) => {
     setSelectedExerciseIndex(index);
-    setSelectedExercise({...exercise});
+    setSelectedExercise({ ...exercise });
     setIsEditModalVisible(true);
   };
-  
+
   useEffect(() => {
     if (!workout) return;
-
     navigation.setOptions({
       headerTransparent: true,
       headerTitle: '',
       headerLeft: () => (
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.headerButton} onPressIn={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
       ),
       headerRight: () => (
         <View style={styles.headerRightContainer}>
-          <TouchableOpacity style={[styles.headerButton, styles.deleteButton]} onPress={handleWorkoutDelete}>
+          <TouchableOpacity style={[styles.headerButton, styles.deleteButton]} onPressIn={handleWorkoutDelete}>
             <Ionicons name="trash-outline" size={22} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPress={handleShare}>
+          <TouchableOpacity style={styles.headerButton} onPressIn={handleShare}>
             <Ionicons name="share-outline" size={22} color="#fff" />
           </TouchableOpacity>
           <View style={styles.favoriteButton}>
@@ -219,7 +225,6 @@ export default function WorkoutDetails() {
       <BottomSheetModalProvider>
         <View style={[styles.container, { backgroundColor: isDark ? colors.background : colors.background }]}>
           <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-          
           <AnimatedWorkoutHeader
             workout={workout}
             animatedHeaderStyle={animatedHeaderStyle}
@@ -248,25 +253,14 @@ export default function WorkoutDetails() {
               <View style={styles.exerciseList}>
                 <ExercisesList 
                   exercises={workoutExercises} 
-                  onDragEnd={handleDragEnd}
-                  onDragStart={() => {}}
                   onExerciseOptions={handleExerciseOptions}
                   onAddExercise={() => setIsAddModalVisible(true)}
                   isUpdatingOrder={isSaving}
-                  simultaneousHandlers={scrollRef} 
+                  onReorderPress={() => setIsReorderModalVisible(true)}
                 />
               </View>
             </View>
           </AnimatedScrollView>
-          
-          {isUpdatingOrder && (
-            <View style={styles.loadingOverlay}>
-              <View style={[styles.loadingIndicator, { backgroundColor: colors.background }]}>
-                <Ionicons name="refresh" size={24} color={colors.primary} />
-                <Text style={[styles.loadingText, { color: colors.text }]}>Saving order...</Text>
-              </View>
-            </View>
-          )}
           
           <View style={[styles.bottomBar, { backgroundColor: colors.background, borderTopColor: colors.divider }]}>
             <TouchableOpacity style={[styles.startButton, { backgroundColor: colors.primary }]} onPress={handleStartWorkout}>
@@ -290,6 +284,13 @@ export default function WorkoutDetails() {
           )}
 
           <ExerciseActionSheet ref={bottomSheetRef} onEdit={handleEdit} onDelete={handleDeleteExercise} />
+
+          <ReorderExercisesModal 
+            visible={isReorderModalVisible}
+            exercises={workoutExercises}
+            onClose={() => setIsReorderModalVisible(false)}
+            onSave={handleSaveOrder}
+          />
         </View>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

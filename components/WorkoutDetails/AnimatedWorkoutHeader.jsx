@@ -1,3 +1,5 @@
+// components/WorkoutDetails/AnimatedWorkoutHeader.jsx
+
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';

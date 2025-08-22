@@ -37,6 +37,22 @@ import ActionModal from '../../components/UI/ActionModal';
 
 
 /**
+ * Generates a dynamic, time-sensitive greeting.
+ * @returns {string} The greeting for the current time of day.
+ */
+const getGreeting = () => {
+  const currentHour = new Date().getHours();
+  if (currentHour < 12) {
+    return "Good morning,";
+  }
+  if (currentHour < 18) {
+    return "Good afternoon,";
+  }
+  return "Good evening,";
+};
+
+
+/**
  * Home Screen
  *
  * Main navigation hub for the app displaying various workout collections
@@ -68,6 +84,8 @@ export default function Home() {
 
   const { userProfile } = useUserProfile();
   const userName = user?.fullName || user?.firstName || 'User';
+
+  const greeting = getGreeting();
 
 
 
@@ -177,7 +195,10 @@ export default function Home() {
       {/* Header */}
       <View style={styles.header}>
       <View style={styles.headerTop}>
-        <Text style={styles.headerTitle}>Welcome, {userName}</Text>
+        <View>
+            <Text style={styles.greetingText}>{greeting}</Text>
+            <Text style={styles.headerTitle}>{userName}</Text>
+        </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.actionButton}
@@ -377,6 +398,11 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.lg,
+  },
+  greetingText: {
+    ...Typography.body, // Use a smaller, standard font size
+    color: colors.textSecondary, // Use a secondary color to de-emphasize it
+    marginBottom: -4, // Adjust spacing to bring the name closer
   },
   headerTitle: {
     ...Typography.title1,

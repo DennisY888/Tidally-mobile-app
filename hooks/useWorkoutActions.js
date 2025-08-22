@@ -173,8 +173,6 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
         // Update local state
         setWorkoutExercises(updatedExercises);
         
-        // Show success feedback
-        Alert.alert("Success", "Exercise deleted successfully");
       }
     } catch (error) {
       console.error("Error deleting exercise:", error);
