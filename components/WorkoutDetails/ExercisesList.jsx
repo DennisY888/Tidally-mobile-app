@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
 
+
 /**
  * Renders a list of exercises for the workout details screen.
  * @param {Object} props - Component props

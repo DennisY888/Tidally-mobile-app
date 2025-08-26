@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { WorkoutService } from '../../services/WorkoutService';
 import NewCategoryForm from '../Forms/NewCategoryForm';
 import { useTheme } from '../../context/ThemeContext';
-
+import FolderActionsModal from './FolderActionsModal'; 
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -27,7 +27,6 @@ const chunkArray = (array, size) => {
   return chunkedArr;
 };
 
-
 export default function Folder({ category, user }) {
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark);
@@ -38,9 +37,9 @@ export default function Folder({ category, user }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const scaleAnims = useRef(categoryList.map(() => new Animated.Value(1))).current;
   const [paginatedCategories, setPaginatedCategories] = useState([]);
+
   const [isFolderModalVisible, setIsFolderModalVisible] = useState(false);
   const [activeFolder, setActiveFolder] = useState(null);
-  
 
   const getCategories = useCallback(async () => {
     if (!user?.primaryEmailAddress?.emailAddress) {
@@ -66,13 +65,77 @@ export default function Folder({ category, user }) {
     }
   }, [user]);
 
-
   const handleCategoryLongPress = useCallback((item) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setActiveFolder(item);
     setIsFolderModalVisible(true);
   }, []);
 
+  // ==================== ROOT IMPLEMENTATION START ====================
+  const handleSaveName = async (newName) => {
+    if (!activeFolder || !user) return;
+    const success = await WorkoutService.updateCategoryName(activeFolder.name, newName, user.primaryEmailAddress.emailAddress);
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (selectedCategory === activeFolder.name) {
+        setSelectedCategory(newName);
+        category(newName);
+      }
+      getCategories();
+    } else {
+      Alert.alert("Error", "Failed to rename folder. A folder with that name may already exist.");
+    }
+    setIsFolderModalVisible(false); // Close the modal on save
+    setActiveFolder(null);
+  };
+
+
+  const handleChangeImage = async () => {
+    if (!activeFolder || !user) return;
+
+    setIsFolderModalVisible(false); 
+
+    const success = await WorkoutService.updateCategoryImage(activeFolder.id, user.id);
+    
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      getCategories(); 
+    }
+    
+    setActiveFolder(null);
+  };
+
+  
+  const handleDelete = () => {
+    if (!activeFolder || !user) return;
+    setIsFolderModalVisible(false); // Close the modal before showing the Alert
+    
+    Alert.alert(
+      "Delete Folder",
+      `Are you sure you want to delete "${activeFolder.name}"? All workouts inside will also be deleted. This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel", onPress: () => setActiveFolder(null) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const success = await WorkoutService.deleteCategory(activeFolder.name, user.primaryEmailAddress.emailAddress);
+            if (success) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (selectedCategory === activeFolder.name) {
+                setSelectedCategory('');
+                category('');
+              }
+              getCategories();
+            } else {
+              Alert.alert("Error", "Failed to delete folder.");
+            }
+            setActiveFolder(null);
+          },
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     if (categoryList.length > 0 && !selectedCategory) {
@@ -82,14 +145,12 @@ export default function Folder({ category, user }) {
     }
   }, [categoryList, selectedCategory, category]);
 
-
   useFocusEffect(
     useCallback(() => {
       getCategories();
     }, [getCategories])
   );
   
-
   const handleCategorySelect = (item) => {
     setSelectedCategory(item.name);
     category(item.name);
@@ -194,6 +255,18 @@ export default function Folder({ category, user }) {
           </View>
         )
       )}
+
+      <FolderActionsModal
+        visible={isFolderModalVisible}
+        folder={activeFolder}
+        onClose={() => {
+          setIsFolderModalVisible(false);
+          setActiveFolder(null);
+        }}
+        onSaveName={handleSaveName}
+        onChangeImage={handleChangeImage}
+        onDelete={handleDelete}
+      />
     </View>
   );
 }

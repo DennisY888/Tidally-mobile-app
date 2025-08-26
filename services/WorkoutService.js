@@ -1,6 +1,10 @@
 // services/WorkoutService.js
+
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, writeBatch, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
-import { db } from '../config/FirebaseConfig';
+import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../config/FirebaseConfig';
 
 
 export const WorkoutService = {
@@ -64,6 +68,70 @@ export const WorkoutService = {
       return { workouts: [], lastVisible: null, isEmpty: true };
     }
   },
+
+
+  /**
+   * Updates the cover image for a specific workout.
+   * @param {string} workoutId - The ID of the workout to update.
+   * @param {string} userEmail - The email of the user for security.
+   * @returns {Promise<boolean>} Success status.
+   */
+  updateWorkoutImage: async (workoutId, userEmail) => {
+    try {
+      // 1. Ask for permission and pick an image (Mirrors add-new-workout.jsx)
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (result.canceled) {
+        return false; // User cancelled the picker
+      }
+
+      const imageUri = result.assets[0].uri;
+
+      // 2. Compress image (Mirrors add-new-workout.jsx)
+      const compressedImage = await manipulateAsync(
+        imageUri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.8, format: SaveFormat.JPEG }
+      );
+
+      // 3. Upload to Firebase Storage (Mirrors add-new-workout.jsx)
+      const resp = await fetch(compressedImage.uri);
+      const blobImage = await resp.blob();
+      const storageRef = ref(storage, `Tidally/${Date.now()}.jpg`);
+      
+      await uploadBytes(storageRef, blobImage);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      // 4. Update the Firestore Document (Mirrors updateWorkoutTitle)
+      const workoutQuery = query(
+        collection(db, 'Routines'),
+        where('id', '==', workoutId),
+        where('user.email', '==', userEmail)
+      );
+      const workoutSnapshot = await getDocs(workoutQuery);
+
+      if (workoutSnapshot.empty) {
+        return false;
+      }
+      
+      const docRef = doc(db, 'Routines', workoutSnapshot.docs[0].id);
+      await updateDoc(docRef, {
+        imageUrl: downloadUrl,
+        lastUpdated: new Date()
+      });
+      
+      return true;
+
+    } catch (error) {
+      console.error("Error updating workout image:", error);
+      return false;
+    }
+  },
   
 
   /**
@@ -125,6 +193,56 @@ getAllDocuments: async () => {
     console.log("========== END DIAGNOSTIC: WorkoutService.getAllDocuments ==========");
   }
 },
+
+
+/**
+   * Updates the image for a specific category.
+   * @param {string} categoryId - The Firestore document ID of the category to update.
+   * @param {string} userId - The authenticated user's ID.
+   * @returns {Promise<boolean>} Success status.
+   */
+  updateCategoryImage: async (categoryId, userId) => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.granted === false) {
+        return false;
+      }
+
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (result.canceled) {
+        return false; // User cancelled the picker
+      }
+
+      const imageUri = result.assets[0].uri;
+
+      const compressedImage = await manipulateAsync(
+        imageUri,
+        [{ resize: { width: 200 } }],
+        { compress: 0.8, format: SaveFormat.JPEG }
+      );
+      const resp = await fetch(compressedImage.uri);
+      const blobImage = await resp.blob();
+
+      const storageRef = ref(storage, `category-icons/${userId}/${Date.now()}.jpg`);
+      await uploadBytes(storageRef, blobImage);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      const docRef = doc(db, 'Category', categoryId);
+      await updateDoc(docRef, { imageUrl: downloadUrl });
+      
+      return true;
+
+    } catch (error) {
+      console.error("Error updating category image:", error);
+      return false;
+    }
+  },
 
 
 searchWorkouts: async (searchTerm, userEmail) => {

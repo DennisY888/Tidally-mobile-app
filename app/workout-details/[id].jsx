@@ -1,3 +1,5 @@
+// app/workout-details/[id].jsx
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
@@ -96,7 +98,6 @@ export default function WorkoutDetails() {
     );
     return { opacity };
   });
-  // --- END REANIMATED LOGIC ---
 
   const {
     handleShare,
@@ -109,22 +110,18 @@ export default function WorkoutDetails() {
 
 
   const handleSaveOrder = async (newlyOrderedExercises) => {
-    // 1. Optimistically update the UI for a seamless experience
     setWorkoutExercises(newlyOrderedExercises);
-    setIsReorderModalVisible(false); // Close the modal immediately
+    setIsReorderModalVisible(false); 
 
-    // 2. Perform the backend update
     try {
       const success = await WorkoutService.updateWorkoutExercises(workout.id, newlyOrderedExercises, new Date());
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Alert.alert("Success", "Your new order has been saved."); // Optional success message
       } else {
         throw new Error("Update failed in service.");
       }
     } catch (error) {
-      // 3. If backend fails, revert the UI and notify the user
-      setWorkoutExercises(workout.exercises); // Revert to original order
+      setWorkoutExercises(workout.exercises); 
       Alert.alert("Update Failed", "Could not save your new order. Please try again.");
     }
   };
@@ -296,6 +293,7 @@ export default function WorkoutDetails() {
     </GestureHandlerRootView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

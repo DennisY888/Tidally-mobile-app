@@ -1,4 +1,5 @@
 // components/WorkoutDetails/EditExerciseModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import { 
   View, 

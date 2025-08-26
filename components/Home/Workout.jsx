@@ -68,6 +68,26 @@ export default function Workout({ workout, layout = "row" }) {
   }, []);
 
 
+  const handleChangeImage = useCallback(async () => {
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      const success = await WorkoutService.updateWorkoutImage(
+        workout.id,
+        workout.user?.email
+      );
+
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // The real-time listeners will automatically update the UI,
+        // so no manual refresh is needed here.
+      }
+    } catch (error) {
+      console.error("Error calling updateWorkoutImage from component:", error);
+      Alert.alert("Error", "Could not update the image.");
+    }
+  }, [workout]);
+
+
   const handleEditWorkout = useCallback(async (newName) => {
     try {
       const success = await WorkoutService.updateWorkoutTitle(
@@ -197,6 +217,8 @@ export default function Workout({ workout, layout = "row" }) {
         onClose={() => setShowActionModal(false)}
         onEdit={handleEditWorkout}
         onDelete={handleDeleteWorkout}
+        onEditImage={handleChangeImage}
+        showEditImage={true}
         showEdit={true}
         showDelete={true}
       />

@@ -53,7 +53,5 @@ export const useFavorites = () => {
     getFavWorkouts();
   }, [favIds, favIdsLoaded]); // 3. The dependency array ensures this re-runs on any change
 
-  // We no longer need the manual 'refresh' function as data is real-time.
-  // The FlatList onRefresh can simply be an empty function or removed.
   return { favWorkouts, loader };
 };

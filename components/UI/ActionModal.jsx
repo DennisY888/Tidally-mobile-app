@@ -29,6 +29,8 @@ const ActionModal = ({
   onClose,
   onEdit,
   onDelete,
+  onEditImage,
+  showEditImage = false,
   showEdit = false,
   showDelete = false,
 }) => {
@@ -69,6 +71,7 @@ const ActionModal = ({
     }
   };
 
+
   const handleDelete = () => {
     if (onDelete) {
       onDelete();
@@ -76,13 +79,24 @@ const ActionModal = ({
     }
   };
 
+
+  const handleEditImage = () => {
+    if (onEditImage) {
+      onEditImage();
+      onClose();
+    }
+  };
+
+
   const handleCancel = () => {
     setIsEditing(false);
     setEditValue(itemName || '');
     onClose();
   };
 
+
   if (!visible) return null;
+
 
   return (
     <Modal
@@ -175,6 +189,21 @@ const ActionModal = ({
                     Cancel
                   </Text>
                 </TouchableOpacity>
+
+                {showEditImage && !isEditing && (
+                  <TouchableOpacity
+                    onPress={handleEditImage}
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: colors.backgroundSecondary },
+                    ]}
+                  >
+                    <Ionicons name="image" size={16} color={colors.text} style={styles.buttonIcon} />
+                    <Text style={[styles.buttonText, { color: colors.text }]}>
+                      Image
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 {showEdit && (
                   <TouchableOpacity

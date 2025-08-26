@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="50mm"
+   height="50mm"
+   viewBox="0 0 50 50"
+   version="1.1"
+   id="svg23793"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs23790" />
+  <g
+     id="layer1">
+    <g
+       id="g3073"
+       transform="matrix(0.99721035,0,0,1.0123513,-48.818259,-111.27576)"
+       style="fill:#e1f1fe;fill-opacity:1;stroke:#b6dbfc;stroke-width:0.99527;stroke-dasharray:none;stroke-opacity:1">
+      <g
+         id="g1868"
+         style="fill:#e1f1fe;fill-opacity:1;stroke:#b6dbfc;stroke-width:0.99527;stroke-dasharray:none;stroke-opacity:1">
+        <g
+           id="g1115-9-8-0"
+           style="fill:#e1f1fe;fill-opacity:1;stroke:#b6dbfc;stroke-width:0.795685;stroke-dasharray:none;stroke-opacity:1"
+           transform="matrix(1.3340941,0,0,1.1727709,15.393487,-27.645264)">
+          <rect
+             style="opacity:1;fill:#e1f1fe;fill-opacity:1;stroke:#b6dbfc;stroke-width:0.795685;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             id="rect556-0-6-3"
+             width="8.4866266"
+             height="3.4582331"
+             x="32.997311"
+             y="126.70853"
+             ry="1.4563972"
+             rx="0.86035544" />
+          <rect
+             style="opacity:1;fill:#e1f1fe;fill-opacity:1;stroke:#b6dbfc;stroke-width:0.795685;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             id="rect554-5-5-9"
+             width="25.072187"
+             height="21.181688"
+             x="31.412287"
+             y="128.8192"
+             ry="2.6700618"
+             rx="2.3828268" />
+        </g>
+        <path
+           style="fill:#e1f1fe;fill-opacity:1;stroke:#b6dbfc;stroke-width:0.99527;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+           d="m 57.837951,143.13604 32.385199,0.0782"
+           id="path1927" />
+      </g>
+    </g>
+  </g>
+</svg>

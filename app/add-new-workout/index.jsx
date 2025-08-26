@@ -29,7 +29,7 @@ import FormField from '../../components/Forms/FormField';
 import ExerciseItem from '../../components/Workout/ExerciseItem';
 import ActionButton from '../../components/UI/ActionButton';
 import AnimatedHeader from '../../components/UI/AnimatedHeader';
-import { showToast } from '../../utils/helpers';
+import { showToast, calculateWorkoutDuration } from '../../utils/helpers';
 
 
 /**
@@ -195,7 +195,7 @@ export default function AddNewWorkout() {
    * Validate form and start upload process
    */
   const onSubmit = () => {
-    if (!formData.title || !formData.category || !formData.est_time || !image) {
+    if (!formData.title || !formData.category || !image) {
       showToast('Please Enter All Details');
       return;
     }
@@ -241,9 +241,11 @@ export default function AddNewWorkout() {
    */
   const saveFormData = async(imageUrl) => {
     try {
+      const estimatedTime = calculateWorkoutDuration(exercises);
       const docId = Date.now().toString();
       await setDoc(doc(db, 'Routines', docId), {
         ...formData,
+        est_time: estimatedTime,
         user: {
           email: user?.primaryEmailAddress?.emailAddress,
           imageUrl: user?.imageUrl,
@@ -357,14 +359,6 @@ export default function AddNewWorkout() {
               </Picker>
             </View>
           </View>
-          
-          {/* Duration */}
-          <FormField
-            label="Est. Duration (min) *"
-            placeholder="Enter estimated duration in minutes"
-            keyboardType="number-pad"
-            onChangeText={(value) => handleInputChange('est_time', value)}
-          />
           
           {/* Exercises Section */}
           <View style={styles.sectionContainer}>

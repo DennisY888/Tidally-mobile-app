@@ -1,10 +1,12 @@
 // hooks/useWorkoutActions.js
+
 import { useState, useCallback } from 'react';
 import { Share, Platform, Alert, ToastAndroid } from 'react-native';
 import { useUser } from '@clerk/clerk-expo';
 import { collection, doc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import * as Haptics from 'expo-haptics';
-import { showToast } from '../utils/helpers';
+import { showToast, calculateWorkoutDuration } from '../utils/helpers';
+import { WorkoutService } from '../services/WorkoutService';
 
 import { db } from '../config/FirebaseConfig';
 
@@ -88,10 +90,11 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
       
       if (!querySnapshot.empty) {
         const docRef = doc(db, 'Routines', querySnapshot.docs[0].id);
+        const newDuration = calculateWorkoutDuration(updatedExercises);
         await updateDoc(docRef, {
-          exercises: updatedExercises
+          exercises: updatedExercises,
+          est_time: newDuration
         });
-        
         // Success feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -127,16 +130,16 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
       };
       
       const docRef = doc(db, 'Routines', workout.id);
+      const newDuration = calculateWorkoutDuration(updatedExercises);
       await updateDoc(docRef, {
-        exercises: updatedExercises
+        exercises: updatedExercises,
+        est_time: newDuration
       });
       
-      // ✅ ONLY UPDATE LOCAL STATE AFTER SUCCESS
       setWorkoutExercises(updatedExercises);
-      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast("Exercise updated successfully");
-      return true; // ✅ RETURN SUCCESS INDICATOR
+      return true; 
     } catch (error) {
       console.error("Error updating exercise:", error);
       showToast("Failed to update exercise");
@@ -166,8 +169,10 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
         );
         
         // Update Firestore
+        const newDuration = calculateWorkoutDuration(updatedExercises);
         await updateDoc(docRef, {
-          exercises: updatedExercises
+          exercises: updatedExercises,
+          est_time: newDuration
         });
         
         // Update local state
