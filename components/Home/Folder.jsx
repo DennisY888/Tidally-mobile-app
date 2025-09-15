@@ -5,7 +5,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert, Animated, Dimen
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 import { db } from './../../config/FirebaseConfig';
-import { LinearGradient } from 'expo-linear-gradient';
+import FolderIcon from '../UI/FolderIcon'; 
 import { Colors, Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
@@ -105,7 +105,7 @@ export default function Folder({ category, user }) {
     setActiveFolder(null);
   };
 
-  
+
   const handleDelete = () => {
     if (!activeFolder || !user) return;
     setIsFolderModalVisible(false); // Close the modal before showing the Alert
@@ -172,30 +172,28 @@ export default function Folder({ category, user }) {
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             style={{flex: 1}}
           >
-            <LinearGradient
-              colors={
-                isSelected
-                  ? [colors.primary, colors.secondary]
-                  : [colors.background, colors.backgroundSecondary]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cardGradient}
-            >
-              <View style={styles.iconContainerLarge}>
-                {item?.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={styles.categoryImageLarge} />
-                ) : (
-                  <Ionicons name="folder" size={40} color={isSelected ? '#fff' : colors.textSecondary} /> 
+            <View style={styles.cardContent}>
+              <FolderIcon
+                width="100%"
+                height="100%"
+                style={StyleSheet.absoluteFillObject} 
+                primaryColor={isSelected ? colors.primary : '#e1f1fe'}
+                secondaryColor={isSelected ? colors.secondary : '#b6dbfc'}
+              />
+              <View style={styles.contentOverlay}>
+                {item?.imageUrl && (
+                  <View style={styles.iconContainerLarge}>
+                    <Image source={{ uri: item.imageUrl }} style={styles.categoryImageLarge} />
+                  </View>
                 )}
+                <Text 
+                  style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : colors.text }]}
+                  numberOfLines={2}
+                >
+                  {item?.name}
+                </Text>
               </View>
-              <Text 
-                style={[ styles.categoryTextLarge, { color: isSelected ? '#fff' : colors.text }]}
-                numberOfLines={2}
-              >
-                {item?.name}
-              </Text>
-            </LinearGradient>
+            </View>
           </MotiView>
         </TouchableOpacity>
     );
@@ -323,31 +321,41 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       padding: Spacing.sm,
       aspectRatio: 1,
     },
-    cardGradient: {
+    cardContent: {
       flex: 1,
       alignItems: 'center',
-      justifyContent: 'center',
-      padding: Spacing.sm,
+      justifyContent: 'center', 
       borderRadius: BorderRadius.lg,
       ...Shadows[isDark ? 'dark' : 'light'].medium, 
+      overflow: 'hidden',
+    },
+    contentOverlay: {
+      width: '100%',
+      height: '100%',
+      alignItems: 'center',
+      justifyContent: 'space-evenly',
+      paddingHorizontal: Spacing.sm, 
+      paddingTop: Spacing.lg,       
+      paddingBottom: Spacing.xs,     
     },
     iconContainerLarge: {
-      width: 48,   
-      height: 48,
-      borderRadius: 24,
+      width: 40,   
+      height: 40,
+      borderRadius: BorderRadius.sm,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: Spacing.sm,
     },
     categoryImageLarge: {
       width: '100%',   
       height: '100%',
-      borderRadius: 24,
+      borderRadius: BorderRadius.sm, 
+      paddingBottom: Spacing.xl
     },
     categoryTextLarge: {
       ...Typography.caption1,
       textAlign: 'center',
       fontFamily: 'outfit-medium',
+      paddingTop: Spacing.sm
     },
     placeholderContainer: {
       backgroundColor: colors.backgroundSecondary, 
