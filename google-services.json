@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "572404761850",
+    "project_id": "tidally-33f78",
+    "storage_bucket": "tidally-33f78.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572404761850:android:582e9b8299747559417543",
+        "android_client_info": {
+          "package_name": "tidally.dg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtiMubhWMozj-Tex1ynxZgcV0FCq8fxMY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:572404761850:android:841eae92c52899eb417543",
+        "android_client_info": {
+          "package_name": "tidally.dg666"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtiMubhWMozj-Tex1ynxZgcV0FCq8fxMY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
