@@ -1,3 +1,5 @@
+// app/workout-play/index.jsx
+
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, SafeAreaView, StatusBar, StyleSheet, Animated as RNAnimated, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';

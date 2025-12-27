@@ -66,13 +66,11 @@ export default function EditExerciseModal({ visible, onClose, exercise, onSave }
   
     // Create updated exercise object
     const updatedExercise = {
-      // Keep any existing properties from the original exercise
       ...exercise,
-      // Update with new values
-      name: exerciseName,
-      sets: parseInt(sets),
-      reps: exerciseType === 'reps' ? parseInt(reps) : null,
-      time: exerciseType === 'time' ? parseInt(time) : null
+      name: exerciseName.trim(),
+      sets: Number(sets) || 0,
+      reps: exerciseType === 'reps' ? (Number(reps) || 0) : null,
+      time: exerciseType === 'time' ? (Number(time) || 0) : null 
     };
     
     // Pass to parent component

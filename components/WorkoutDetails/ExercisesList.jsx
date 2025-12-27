@@ -70,7 +70,6 @@ const ExercisesList = ({
         scrollEnabled={false}
         contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item, index }) => {
-          // Ensure item has all required properties to prevent undefined text
           const name = item && item.name ? item.name : "Unnamed Exercise";
           const sets = item && item.sets ? item.sets : 0;
           const reps = item && item.reps ? item.reps : 0;
@@ -80,11 +79,9 @@ const ExercisesList = ({
             <TouchableOpacity
               activeOpacity={0.7}
               disabled={isUpdatingOrder}
-              // ==================== ROOT FIX START ====================
               onPressIn={() => {
                   onExerciseOptions(item, index);
               }}
-              // ===================== ROOT FIX END =====================
               style={[
                 styles.exerciseItem,
                 { backgroundColor: colors.backgroundSecondary },

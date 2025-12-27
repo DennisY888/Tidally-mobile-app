@@ -1,3 +1,5 @@
+// app/workout-details/[id].jsx
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';

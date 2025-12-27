@@ -3,6 +3,7 @@ import { Animated } from 'react-native';
 import { Audio } from 'expo-av';
 import WorkoutSessionService from '../services/WorkoutSessionService';
 import { useActiveWorkout } from '../context/WorkoutDetailContext';
+import { WorkoutService } from '../services/WorkoutService';
 
 export const useWorkoutPlayback = (params, isResuming = false) => {
   const { playbackWorkout } = useActiveWorkout(); // CONTEXT BRIDGE
@@ -41,19 +42,30 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
       setIsLoading(true);
 
       let targetWorkout = playbackWorkout || params;
-      
       let rawExercises = [];
-      if (targetWorkout.exercises) {
-        if (Array.isArray(targetWorkout.exercises)) {
-          rawExercises = targetWorkout.exercises;
-        } else if (typeof targetWorkout.exercises === 'string') {
-          try {
-            rawExercises = JSON.parse(targetWorkout.exercises);
-          } catch (e) {
-            console.error("Failed to parse exercises JSON:", e);
-            rawExercises = [];
+
+      if (targetWorkout.exercises && Array.isArray(targetWorkout.exercises)) {
+        rawExercises = targetWorkout.exercises;
+      } 
+      else if (targetWorkout.workoutId) {
+        try {
+          if (params.isResuming === 'true') {
+            const sessionData = await WorkoutSessionService.resumeSession(targetWorkout.workoutId);
+            if (sessionData && sessionData.session) {
+              targetWorkout = { ...sessionData.workout, ...sessionData.session };
+              rawExercises = sessionData.session.exercises || [];
+            }
+          } else {
+            const fetched = await WorkoutService.getWorkoutById(targetWorkout.workoutId);
+            if (fetched) {
+              targetWorkout = fetched;
+              rawExercises = fetched.exercises || [];
+            }
           }
-        }
+        } catch (e) { console.error("Rescue fetch failed:", e); }
+      } 
+      else if (typeof targetWorkout.exercises === 'string') {
+         try { rawExercises = JSON.parse(targetWorkout.exercises); } catch (e) {}
       }
 
       sessionDataRef.current.workoutMeta = {

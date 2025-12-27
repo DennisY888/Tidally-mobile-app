@@ -38,7 +38,10 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
     });
     router.push({
       pathname: '/workout-play',
-      params: { isResuming: 'false' }
+      params: { 
+        isResuming: 'false',
+        workoutId: workout.id
+       }
     });
   };
 

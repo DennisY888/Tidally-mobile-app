@@ -14,7 +14,12 @@ export default function ReorderExercisesModal({ visible, exercises, onClose, onS
 
   useEffect(() => {
     if (visible) {
-      setOrderedExercises(JSON.parse(JSON.stringify(exercises)));
+      const deepCopy = JSON.parse(JSON.stringify(exercises));
+      const safeList = deepCopy.map((ex, i) => ({
+        ...ex,
+        id: ex.id || `temp-${Date.now()}-${i}` 
+      }));
+      setOrderedExercises(safeList);
     }
   }, [visible, exercises]);
   
@@ -94,7 +99,7 @@ export default function ReorderExercisesModal({ visible, exercises, onClose, onS
           <DraggableFlatList
             data={orderedExercises}
             onDragEnd={handleDragEnd}
-            keyExtractor={(item, index) => `${item.name}-${item.sets}-${item.reps}-${item.time}-${index}`}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             containerStyle={{ flex: 1, padding: Spacing.md }} // Use padding on the container
             contentContainerStyle={{ paddingBottom: Spacing.md }}

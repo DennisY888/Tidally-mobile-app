@@ -67,7 +67,10 @@ export default function Resume() {
 
       router.push({
         pathname: '/workout-play',
-        params: { isResuming: 'true' }
+        params: { 
+          isResuming: 'true',
+          workoutId: session.workoutId
+         }
       });
     } catch (error) {
       Alert.alert("Error", "Could not resume the workout session.");

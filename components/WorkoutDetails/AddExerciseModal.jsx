@@ -40,17 +40,18 @@ export default function AddExerciseModal({ visible, onClose, onAdd }) {
       return;
     }
 
-    if (!sets.trim()) {
-      Alert.alert('Error', 'Please enter number of sets');
+    if (!sets.trim() || Number(sets) <= 0) {
+      Alert.alert('Error', 'Please enter a valid number of sets (minimum 1)');
       return;
     }
 
-    // Create exercise object
     const newExercise = {
-      name: exerciseName,
-      sets: parseInt(sets),
-      reps: exerciseType === 'reps' ? parseInt(reps) : null,
-      time: exerciseType === 'time' ? parseInt(time) : null
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
+      name: exerciseName.trim(),
+      sets: Number(sets) || 0,
+      reps: exerciseType === 'reps' ? (Number(reps) || 0) : null,
+      time: exerciseType === 'time' ? (Number(time) || 0) : null,
+      completedSets: 0
     };
 
     // Pass to parent
