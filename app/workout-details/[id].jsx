@@ -1,23 +1,11 @@
-// app/workout-details/[id].jsx
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  StatusBar,
-  Platform,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useUser } from '@clerk/clerk-expo';
 import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, interpolate } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { useTheme } from '../../context/ThemeContext';
@@ -30,13 +18,10 @@ import AnimatedWorkoutHeader from '../../components/WorkoutDetails/AnimatedWorko
 import { useWorkoutActions } from '../../hooks/useWorkoutActions';
 import { WorkoutService } from '../../services/WorkoutService';
 import ExerciseActionSheet from '../../components/WorkoutDetails/ExerciseActionSheet';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useActiveWorkout } from '../../context/WorkoutDetailContext';
 import WorkoutSessionService from '../../services/WorkoutSessionService';
 import ReorderExercisesModal from '../../components/WorkoutDetails/ReorderExercisesModal';
 
-
-// Constants
 const { height } = Dimensions.get('window');
 const HEADER_MAX_HEIGHT = height * 0.5;
 const HEADER_MIN_HEIGHT = Platform.OS === 'ios' ? 90 : 70;
@@ -44,8 +29,7 @@ const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export default function WorkoutDetails() {
-  const { activeWorkout: workout } = useActiveWorkout();
-
+  const { activeWorkout: workout, setPlaybackWorkout } = useActiveWorkout();
   const navigation = useNavigation();
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -59,117 +43,68 @@ export default function WorkoutDetails() {
   const [selectedExercise, setSelectedExercise] = useState(null);
   const [isReorderModalVisible, setIsReorderModalVisible] = useState(false);
 
-
-  // --- REANIMATED LOGIC ---
   const scrollY = useSharedValue(0);
-
   const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
+    onScroll: (event) => { scrollY.value = event.contentOffset.y; },
   });
 
-  const animatedHeaderStyle = useAnimatedStyle(() => {
-    const height = interpolate(
-      scrollY.value,
-      [0, HEADER_SCROLL_DISTANCE],
-      [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT],
-      'clamp'
-    );
-    return { height };
-  });
+  const animatedHeaderStyle = useAnimatedStyle(() => ({
+    height: interpolate(scrollY.value, [0, HEADER_SCROLL_DISTANCE], [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT], 'clamp'),
+  }));
+  const animatedImageStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, HEADER_SCROLL_DISTANCE / 2, HEADER_SCROLL_DISTANCE], [1, 0.5, 0], 'clamp'),
+  }));
+  const animatedTitleStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, HEADER_SCROLL_DISTANCE / 2, HEADER_SCROLL_DISTANCE], [0, 0.5, 1], 'clamp'),
+  }));
 
-  const animatedImageStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      scrollY.value,
-      [0, HEADER_SCROLL_DISTANCE / 2, HEADER_SCROLL_DISTANCE],
-      [1, 0.5, 0],
-      'clamp'
-    );
-    return { opacity };
-  });
-
-  const animatedTitleStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      scrollY.value,
-      [0, HEADER_SCROLL_DISTANCE / 2, HEADER_SCROLL_DISTANCE],
-      [0, 0.5, 1],
-      'clamp'
-    );
-    return { opacity };
-  });
-
-  const {
-    handleShare,
-    addExercise,
-    saveEditedExercise,
-    handleDeleteExercise,
-    selectedExerciseIndex,
-    setSelectedExerciseIndex
-  } = useWorkoutActions(workout, workoutExercises, setWorkoutExercises, router);
-
+  const { handleShare, addExercise, saveEditedExercise, handleDeleteExercise, setSelectedExerciseIndex } = 
+    useWorkoutActions(workout, workoutExercises, setWorkoutExercises, router);
 
   const handleSaveOrder = async (newlyOrderedExercises) => {
     setWorkoutExercises(newlyOrderedExercises);
-    setIsReorderModalVisible(false); 
-
+    setIsReorderModalVisible(false);
     try {
       const success = await WorkoutService.updateWorkoutExercises(workout.id, newlyOrderedExercises, new Date());
-      if (success) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        throw new Error("Update failed in service.");
-      }
+      if (success) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      else throw new Error("Update failed in service.");
     } catch (error) {
-      setWorkoutExercises(workout.exercises); 
+      setWorkoutExercises(workout.exercises);
       Alert.alert("Update Failed", "Could not save your new order. Please try again.");
     }
   };
-
 
   const handleStartWorkout = async () => {
     if (!workout) return;
     try {
       await WorkoutSessionService.deleteSession(workout.id);
+      
+      // Populate Context Bridge
+      setPlaybackWorkout({
+        ...workout,
+        exercises: workoutExercises, 
+        isResuming: false
+      });
+      
       router.push({
         pathname: '/workout-play',
-        params: { ...workout, exercises: JSON.stringify(workoutExercises), isResuming: 'false' }
+        params: { isResuming: 'false' } 
       });
     } catch (error) {
       console.error("Error starting workout:", error);
-      router.push({
-        pathname: '/workout-play',
-        params: { ...workout, exercises: JSON.stringify(workoutExercises), isResuming: 'false' }
-      });
     }
   };
 
   const handleWorkoutDelete = useCallback(async () => {
     if (!workout) return;
-    Alert.alert(
-      "Delete Workout",
-      `Are you sure you want to delete "${workout.title}"? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const success = await WorkoutService.deleteWorkout(workout.id, workout.user?.email);
-              if (success) {
-                router.back();
-              } else {
-                Alert.alert("Error", "Failed to delete workout.");
-              }
-            } catch (error) {
-              console.error("Error deleting workout:", error);
-              Alert.alert("Error", "An error occurred while deleting.");
-            }
-          }
-        }
-      ]
-    );
+    Alert.alert("Delete Workout", `Are you sure you want to delete "${workout.title}"?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+          const success = await WorkoutService.deleteWorkout(workout.id, workout.user?.email);
+          if (success) router.back();
+          else Alert.alert("Error", "Failed to delete workout.");
+      }}
+    ]);
   }, [workout, router]);
 
   const handleExerciseOptions = (exercise, index) => {
@@ -186,56 +121,28 @@ export default function WorkoutDetails() {
   useEffect(() => {
     if (!workout) return;
     navigation.setOptions({
-      headerTransparent: true,
-      headerTitle: '',
-      headerLeft: () => (
-        <TouchableOpacity style={styles.headerButton} onPressIn={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      ),
+      headerTransparent: true, headerTitle: '',
+      headerLeft: () => <TouchableOpacity style={styles.headerButton} onPressIn={() => router.back()}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>,
       headerRight: () => (
         <View style={styles.headerRightContainer}>
-          <TouchableOpacity style={[styles.headerButton, styles.deleteButton]} onPressIn={handleWorkoutDelete}>
-            <Ionicons name="trash-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPressIn={handleShare}>
-            <Ionicons name="share-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.favoriteButton}>
-            <MarkFav workout={workout} />
-          </View>
+          <TouchableOpacity style={[styles.headerButton, styles.deleteButton]} onPressIn={handleWorkoutDelete}><Ionicons name="trash-outline" size={22} color="#fff" /></TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton} onPressIn={handleShare}><Ionicons name="share-outline" size={22} color="#fff" /></TouchableOpacity>
+          <View style={styles.favoriteButton}><MarkFav workout={workout} /></View>
         </View>
       ),
     });
   }, [workout, handleWorkoutDelete, handleShare]);
 
-  if (!workout) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
+  if (!workout) return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <View style={[styles.container, { backgroundColor: isDark ? colors.background : colors.background }]}>
           <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-          <AnimatedWorkoutHeader
-            workout={workout}
-            animatedHeaderStyle={animatedHeaderStyle}
-            animatedImageStyle={animatedImageStyle}
-            animatedTitleStyle={animatedTitleStyle}
-          />
+          <AnimatedWorkoutHeader workout={workout} animatedHeaderStyle={animatedHeaderStyle} animatedImageStyle={animatedImageStyle} animatedTitleStyle={animatedTitleStyle} />
           
-          <AnimatedScrollView
-            ref={scrollRef}
-            onScroll={scrollHandler}
-            scrollEventThrottle={16}
-            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_MAX_HEIGHT }]}
-            showsVerticalScrollIndicator={false}
-          >
+          <AnimatedScrollView ref={scrollRef} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_MAX_HEIGHT }]} showsVerticalScrollIndicator={false}>
             <View style={styles.workoutInfo}>
               <View style={styles.titleContainer}>
                 <Text style={[styles.title, { color: colors.text }]}>{workout.title}</Text>
@@ -243,18 +150,10 @@ export default function WorkoutDetails() {
                   <Text style={[styles.categoryText, { color: colors.primary }]}>{workout.category}</Text>
                 </View>
               </View>
-              <Text style={[styles.description, { color: colors.textSecondary }]}>
-                {workout.description || 'Complete all sets of each exercise with proper form for best results.'}
-              </Text>
+              <Text style={[styles.description, { color: colors.textSecondary }]}>{workout.description || 'Complete all sets of each exercise with proper form for best results.'}</Text>
               <WorkoutStats workout={workout} isDark={isDark} colors={colors} />
               <View style={styles.exerciseList}>
-                <ExercisesList 
-                  exercises={workoutExercises} 
-                  onExerciseOptions={handleExerciseOptions}
-                  onAddExercise={() => setIsAddModalVisible(true)}
-                  isUpdatingOrder={isSaving}
-                  onReorderPress={() => setIsReorderModalVisible(true)}
-                />
+                <ExercisesList exercises={workoutExercises} onExerciseOptions={handleExerciseOptions} onAddExercise={() => setIsAddModalVisible(true)} isUpdatingOrder={isSaving} onReorderPress={() => setIsReorderModalVisible(true)} />
               </View>
             </View>
           </AnimatedScrollView>
@@ -267,33 +166,14 @@ export default function WorkoutDetails() {
           </View>
 
           <AddExerciseModal visible={isAddModalVisible} onClose={() => setIsAddModalVisible(false)} onAdd={addExercise} />
-
-          {isEditModalVisible && selectedExercise && (
-            <EditExerciseModal
-              visible={isEditModalVisible}
-              onClose={() => setIsEditModalVisible(false)}
-              exercise={selectedExercise}
-              onSave={async (editedExercise) => {
-                const success = await saveEditedExercise(editedExercise);
-                if (success) setIsEditModalVisible(false);
-              }}
-            />
-          )}
-
+          {isEditModalVisible && selectedExercise && <EditExerciseModal visible={isEditModalVisible} onClose={() => setIsEditModalVisible(false)} exercise={selectedExercise} onSave={async (edited) => { if (await saveEditedExercise(edited)) setIsEditModalVisible(false); }} />}
           <ExerciseActionSheet ref={bottomSheetRef} onEdit={handleEdit} onDelete={handleDeleteExercise} />
-
-          <ReorderExercisesModal 
-            visible={isReorderModalVisible}
-            exercises={workoutExercises}
-            onClose={() => setIsReorderModalVisible(false)}
-            onSave={handleSaveOrder}
-          />
+          <ReorderExercisesModal visible={isReorderModalVisible} exercises={workoutExercises} onClose={() => setIsReorderModalVisible(false)} onSave={handleSaveOrder} />
         </View>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -308,9 +188,6 @@ const styles = StyleSheet.create({
   categoryText: { ...Typography.caption1, fontFamily: 'outfit-medium' },
   description: { ...Typography.body, marginBottom: Spacing.lg },
   exerciseList: { marginBottom: Spacing.xl },
-  loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  loadingIndicator: { borderRadius: BorderRadius.md, padding: Spacing.lg, flexDirection: 'row', alignItems: 'center', ...Shadows.medium },
-  loadingText: { ...Typography.body, marginLeft: Spacing.sm },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1, padding: Spacing.md, paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.md, ...Shadows.medium },
   startButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', borderRadius: BorderRadius.md, padding: Spacing.md },
   startButtonText: { ...Typography.headline, color: '#fff', marginLeft: Spacing.sm },

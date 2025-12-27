@@ -1,20 +1,23 @@
-// context/WorkoutDetailContext.js
 import React, { createContext, useState, useContext } from 'react';
 
-
-// Create the context with a default shape for better autocompletion.
 const WorkoutDetailContext = createContext({
   activeWorkout: null,
   setActiveWorkout: () => {},
+  playbackWorkout: null,
+  setPlaybackWorkout: () => {},
 });
 
-
-// Provider component. holds the state.
 export const WorkoutDetailProvider = ({ children }) => {
   const [activeWorkout, setActiveWorkout] = useState(null);
 
-  // The 'value' object is what consuming components will receive.
-  const value = { activeWorkout, setActiveWorkout };
+  const [playbackWorkout, setPlaybackWorkout] = useState(null);
+
+  const value = { 
+    activeWorkout, 
+    setActiveWorkout,
+    playbackWorkout,
+    setPlaybackWorkout
+  };
 
   return (
     <WorkoutDetailContext.Provider value={value}>
@@ -23,8 +26,6 @@ export const WorkoutDetailProvider = ({ children }) => {
   );
 };
 
-
-// custom hook for easy consumption. Following best practice.
 export const useActiveWorkout = () => {
   const context = useContext(WorkoutDetailContext);
   if (!context) {

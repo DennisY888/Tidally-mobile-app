@@ -8,24 +8,13 @@ import { db, storage } from '../config/FirebaseConfig';
 
 
 export const WorkoutService = {
-  /**
-   * Fetch workouts with flexible querying options and pagination support
-   * 
-   * @param {Object} options - Query options
-   * @param {string} [options.category] - Filter by category
-   * @param {string} [options.userEmail] - Filter by user email
-   * @param {number} [options.limit=10] - Number of workouts to fetch
-   * @param {Object} [options.lastVisible] - Last document for pagination
-   * @param {string} [options.orderByField='createdAt'] - Field to order by
-   * @param {string} [options.orderDirection='desc'] - Order direction ('asc' or 'desc')
-   * @returns {Promise<Object>} Result with workouts, pagination info, and status
-   */
+
   getWorkouts: async ({ 
     category = null, 
     userEmail = null, 
     limit: resultLimit = 10, 
     lastVisible = null,
-    orderByField = 'id', // Changed from 'createdAt' to 'id'
+    orderByField = 'id', 
     orderDirection = 'desc'
   }) => {
     try {
@@ -78,7 +67,6 @@ export const WorkoutService = {
    */
   updateWorkoutImage: async (workoutId, userEmail) => {
     try {
-      // 1. Ask for permission and pick an image (Mirrors add-new-workout.jsx)
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -87,19 +75,17 @@ export const WorkoutService = {
       });
 
       if (result.canceled) {
-        return false; // User cancelled the picker
+        return false; 
       }
 
       const imageUri = result.assets[0].uri;
 
-      // 2. Compress image (Mirrors add-new-workout.jsx)
       const compressedImage = await manipulateAsync(
         imageUri,
         [{ resize: { width: 1024 } }],
         { compress: 0.8, format: SaveFormat.JPEG }
       );
 
-      // 3. Upload to Firebase Storage (Mirrors add-new-workout.jsx)
       const resp = await fetch(compressedImage.uri);
       const blobImage = await resp.blob();
       const storageRef = ref(storage, `Tidally/${Date.now()}.jpg`);
@@ -107,7 +93,6 @@ export const WorkoutService = {
       await uploadBytes(storageRef, blobImage);
       const downloadUrl = await getDownloadURL(storageRef);
 
-      // 4. Update the Firestore Document (Mirrors updateWorkoutTitle)
       const workoutQuery = query(
         collection(db, 'Routines'),
         where('id', '==', workoutId),
@@ -163,12 +148,10 @@ export const WorkoutService = {
 
 getAllDocuments: async () => {
   try {
-    // Get all documents
     const snapshot = await getDocs(collection(db, 'Routines'));
     
     console.log(`Found ${snapshot.docs.length} total documents in Routines collection`);
     
-    // Log detailed info about each document
     snapshot.docs.forEach((doc, index) => {
       const data = doc.data();
       console.log(`\nDocument ${index + 1}:`);
@@ -216,7 +199,7 @@ getAllDocuments: async () => {
       });
 
       if (result.canceled) {
-        return false; // User cancelled the picker
+        return false; 
       }
 
       const imageUri = result.assets[0].uri;
@@ -248,26 +231,43 @@ getAllDocuments: async () => {
 searchWorkouts: async (searchTerm, userEmail) => {
     try {
       const lowercasedTerm = searchTerm.toLowerCase().trim();
-  
-      if (lowercasedTerm === '' || !userEmail) {
-        return { workouts: [] };
+      if (lowercasedTerm === '' || !userEmail) return { workouts: [] };
+
+      try {
+        const q = query(
+          collection(db, 'Routines'),
+          where('user.email', '==', userEmail), 
+          where('searchIndex', 'array-contains', lowercasedTerm),
+          limit(20)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          return { workouts: snapshot.docs.map(doc => ({ ...doc.data(), _id: doc.id })) };
+        }
+      } catch (indexError) {
       }
-  
-      const q = query(
+
+      const qFallback = query(
         collection(db, 'Routines'),
-        where('user.email', '==', userEmail), 
-        where('searchIndex', 'array-contains', lowercasedTerm),
-        limit(20)
+        where('user.email', '==', userEmail),
+        orderBy('createdAt', 'desc'),
+        limit(50)
       );
-  
-      const snapshot = await getDocs(q);
-  
-      const workouts = snapshot.docs.map(doc => doc.data());
-  
-      return { workouts: workouts };
-  
+
+      const snapshotFallback = await getDocs(qFallback);
+      const allDocs = snapshotFallback.docs.map(doc => ({ ...doc.data(), _id: doc.id }));
+
+      const filtered = allDocs.filter(w => {
+        const titleMatch = w.title?.toLowerCase().includes(lowercasedTerm);
+        const categoryMatch = w.category?.toLowerCase().includes(lowercasedTerm);
+        const exerciseMatch = w.exercises?.some(ex => ex.name?.toLowerCase().includes(lowercasedTerm));
+        return titleMatch || categoryMatch || exerciseMatch;
+      });
+
+      return { workouts: filtered };
+
     } catch (error) {
-      console.error("Error searching workouts with Firestore index:", error);
+      console.error("Error searching workouts:", error);
       return { workouts: [] };
     }
   },
@@ -283,7 +283,6 @@ searchWorkouts: async (searchTerm, userEmail) => {
    */
   updateWorkoutExercises: async (workoutId, exercises, timestamp) => {
     try {
-      // Find the document by id
       const q = query(collection(db, 'Routines'), where('id', '==', workoutId));
       const querySnapshot = await getDocs(q);
       
@@ -291,10 +290,8 @@ searchWorkouts: async (searchTerm, userEmail) => {
         return false;
       }
       
-      // Get document reference
       const docRef = doc(db, 'Routines', querySnapshot.docs[0].id);
       
-      // Update the exercises
       await updateDoc(docRef, {
         exercises: exercises,
         lastUpdated: timestamp
@@ -308,50 +305,27 @@ searchWorkouts: async (searchTerm, userEmail) => {
   },
 
 
-  /**
-   * Delete a workout by ID and clean up related data
-   * 
-   * @param {string} workoutId - ID of the workout to delete
-   * @param {string} userEmail - Email of the user (for security)
-   * @returns {Promise<boolean>} Success status
-   */
   deleteWorkout: async (workoutId, userEmail) => {
     try {
-      // Find and delete the workout document
-      const workoutQuery = query(
-        collection(db, 'Routines'), 
-        where('id', '==', workoutId),
-        where('user.email', '==', userEmail)
-      );
-      const workoutSnapshot = await getDocs(workoutQuery);
+      const q = query(collection(db, 'Routines'), where('id', '==', workoutId), where('user.email', '==', userEmail));
+      const snap = await getDocs(q);
       
-      if (workoutSnapshot.empty) {
-        console.log("Workout not found or not owned by user");
-        return false;
-      }
+      if (snap.empty) return false;
+      await deleteDoc(snap.docs[0].ref);
       
-      // Delete the workout document
-      await deleteDoc(workoutSnapshot.docs[0].ref);
-      
-      // Remove from user's favorites if it exists
-      const favoritesDocRef = doc(db, 'Favorites', userEmail);
-      const favoritesDoc = await getDoc(favoritesDocRef);
-      
-      if (favoritesDoc.exists()) {
-        const currentFavorites = favoritesDoc.data().favorites || [];
-        const updatedFavorites = currentFavorites.filter(id => id !== workoutId);
-        
-        if (currentFavorites.length !== updatedFavorites.length) {
-          await updateDoc(favoritesDocRef, { favorites: updatedFavorites });
-        }
+      const favRef = doc(db, 'Favorites', userEmail);
+      const favSnap = await getDoc(favRef);
+      if (favSnap.exists()) {
+        const newFavs = (favSnap.data().favorites || []).filter(id => id !== workoutId);
+        await updateDoc(favRef, { favorites: newFavs });
       }
 
-      const WorkoutSessionService = await import('./WorkoutSessionService');
-      await WorkoutSessionService.default.deleteSession(workoutId);
+      const WorkoutSessionService = (await import('./WorkoutSessionService')).default;
+      await WorkoutSessionService.deleteSession(workoutId);
       
       return true;
     } catch (error) {
-      console.error(`Error deleting workout ${workoutId}:`, error);
+      console.error(error);
       return false;
     }
   },
@@ -398,7 +372,6 @@ searchWorkouts: async (searchTerm, userEmail) => {
    */
   updateCategoryName: async (oldName, newName, userEmail) => {
     try {
-      // Update category document
       const categoryQuery = query(
         collection(db, 'Category'),
         where('name', '==', oldName),
@@ -408,11 +381,9 @@ searchWorkouts: async (searchTerm, userEmail) => {
       
       if (categorySnapshot.empty) return false;
       
-      // Update category name
       const categoryDoc = categorySnapshot.docs[0];
       await updateDoc(categoryDoc.ref, { name: newName });
       
-      // Update all workouts in this category
       const workoutsQuery = query(
         collection(db, 'Routines'),
         where('category', '==', oldName),
@@ -457,7 +428,6 @@ searchWorkouts: async (searchTerm, userEmail) => {
         return false;
       }
       
-      // Find all workouts in this category
       const workoutsQuery = query(
         collection(db, 'Routines'),
         where('category', '==', categoryName),
@@ -465,14 +435,12 @@ searchWorkouts: async (searchTerm, userEmail) => {
       );
       const workoutsSnapshot = await getDocs(workoutsQuery);
       
-      // Delete all workouts in this category
       const batch = writeBatch(db);
       workoutsSnapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
       });
       await batch.commit();
       
-      // Delete the category document
       await deleteDoc(categorySnapshot.docs[0].ref);
       
       return true;
