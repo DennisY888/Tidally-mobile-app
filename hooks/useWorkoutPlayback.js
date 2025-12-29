@@ -1,3 +1,4 @@
+// hooks/useWorkoutPlayback.js
 import { useState, useRef, useEffect } from 'react';
 import { Animated } from 'react-native';
 import { Audio } from 'expo-av';
@@ -6,20 +7,17 @@ import { useActiveWorkout } from '../context/WorkoutDetailContext';
 import { WorkoutService } from '../services/WorkoutService';
 
 export const useWorkoutPlayback = (params, isResuming = false) => {
-  const { playbackWorkout } = useActiveWorkout(); // CONTEXT BRIDGE
+  const { playbackWorkout } = useActiveWorkout(); 
 
-  // Sound State
   const [completeSound, setCompleteSound] = useState();
   const [startSound, setStartSound] = useState();
   
-  // Logic State
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExercises, setSessionExercises] = useState([]);
   const [workoutProgress, setWorkoutProgress] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [workoutComplete, setWorkoutComplete] = useState(false);
   
-  // Refs
   const progressAnim = useRef(new Animated.Value(0)).current;
   const timerRef = useRef(null);
   const sessionDataRef = useRef({
@@ -30,13 +28,17 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     workoutMeta: {}
   });
 
-  // Keep refs in sync
   useEffect(() => { sessionDataRef.current.exercises = sessionExercises; }, [sessionExercises]);
   useEffect(() => { sessionDataRef.current.progress = workoutProgress; }, [workoutProgress]);
   useEffect(() => { sessionDataRef.current.elapsedTime = elapsedTime; }, [elapsedTime]);
   useEffect(() => { sessionDataRef.current.isComplete = workoutComplete; }, [workoutComplete]);
 
-  // --- INITIALIZATION ---
+  const updateExerciseData = (index, data) => {
+    setSessionExercises(current => 
+      current.map((ex, i) => i === index ? { ...ex, ...data } : ex)
+    );
+  };
+
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
@@ -86,6 +88,8 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
         completedSets: exercise.completedSets ?? 0,
         isTimerActive: false,
         isPaused: false,
+        savedTimeLeft: exercise.savedTimeLeft,
+        savedReps: exercise.savedReps
       }));
 
       const progressValue = isResuming ? (parseFloat(targetWorkout.progress) || 0) : 0;
@@ -102,7 +106,6 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
 
     initialize();
 
-    // Global Timer
     const timer = setInterval(() => {
       if (!sessionDataRef.current.isComplete) {
         setElapsedTime(prev => prev + 1);
@@ -117,14 +120,13 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     };
   }, [params.id, isResuming]); 
 
-  // --- PROGRESS TRACKER ---
+
   useEffect(() => {
     if (!isLoading) updateProgress();
   }, [sessionExercises, isLoading]);
 
   const saveSessionState = async () => {
     const { isComplete, exercises, progress, elapsedTime, workoutMeta } = sessionDataRef.current;
-    
     if (isComplete || !workoutMeta.id) return;
 
     const sessionData = {
@@ -134,7 +136,7 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
       category: workoutMeta.category,
       description: workoutMeta.description,
       est_time: workoutMeta.est_time,
-      exercises: exercises,
+      exercises: exercises, 
       progress: progress,
       elapsedTime: elapsedTime,
       isComplete: isComplete,
@@ -144,7 +146,6 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     await WorkoutSessionService.saveSession(sessionData);
   };
 
-  // --- SOUNDS ---
   const loadSounds = async () => {
     try {
       const { sound: complete } = await Audio.Sound.createAsync(require('../assets/sounds/complete.mp3'));
@@ -168,7 +169,6 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     } catch (e) { console.log('Play sound error', e); }
   };
 
-  // --- ACTIONS ---
   
   const handleSetComplete = (exerciseIndex) => {
     setSessionExercises(current => 
@@ -178,7 +178,9 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
           remainingSets: Math.max(0, ex.remainingSets - 1),
           completedSets: (ex.completedSets || 0) + 1,
           isTimerActive: false,
-          isPaused: false
+          isPaused: false,
+          savedTimeLeft: ex.time, 
+          savedReps: 0           
         } : ex
       )
     );
@@ -235,6 +237,7 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     formatTime,
     handleSetComplete,
     toggleTimer,
-    saveSession: saveSessionState
+    saveSession: saveSessionState,
+    updateExerciseData 
   };
 };

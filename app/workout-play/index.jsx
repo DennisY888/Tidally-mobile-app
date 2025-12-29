@@ -27,7 +27,8 @@ export default function WorkoutPlay() {
     workoutComplete,
     handleSetComplete,
     toggleTimer,
-    saveSession 
+    saveSession,
+    updateExerciseData 
   } = useWorkoutPlayback(params, isResuming);
 
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -37,13 +38,15 @@ export default function WorkoutPlay() {
   useEffect(() => {
     if (!sessionExercises || sessionExercises.length === 0 || workoutComplete) return;
     
+    let timeoutId;
     const currentEx = sessionExercises[currentExerciseIndex];
     if (!currentEx || currentEx.remainingSets === 0) {
        const nextIndex = sessionExercises.findIndex((ex, idx) => idx >= currentExerciseIndex && ex.remainingSets > 0);
        if (nextIndex !== -1 && nextIndex !== currentExerciseIndex) {
-          setTimeout(() => setCurrentExerciseIndex(nextIndex), 500);
+          timeoutId = setTimeout(() => setCurrentExerciseIndex(nextIndex), 500);
        }
     }
+    return () => clearTimeout(timeoutId);
   }, [sessionExercises, currentExerciseIndex, workoutComplete]);
 
   // Scroll to active
@@ -159,6 +162,7 @@ export default function WorkoutPlay() {
                             onCompleteSet={() => onCompleteSet(index)}
                             onActivate={() => setCurrentExerciseIndex(index)}
                             onToggleTimer={() => onToggleTimer(index)}
+                            onUpdateData={(data) => updateExerciseData(index, data)}
                         />
                     </View>
                 )}

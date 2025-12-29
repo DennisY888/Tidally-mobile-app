@@ -4,25 +4,42 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Check, Play, Pause } from 'lucide-react-native';
 
-const NewRepCounter = ({ reps, onComplete, currentSet, totalSets }) => {
+const NewRepCounter = ({ 
+  reps, 
+  onComplete, 
+  currentSet, 
+  totalSets, 
+  savedReps, 
+  onUpdate   
+}) => {
   const { colors } = useTheme();
-  const [completed, setCompleted] = useState(0);
+  
+  const [completed, setCompleted] = useState(savedReps !== undefined ? savedReps : 0);
   const [autoRunning, setAutoRunning] = useState(false);
   const completionHandled = useRef(false);
   const isComplete = completed >= reps;
+  
+  const completedRef = useRef(completed);
+  useEffect(() => { completedRef.current = completed; }, [completed]);
 
   useEffect(() => {
-    setCompleted(0);
+    return () => {
+      if (onUpdate) onUpdate(completedRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    setCompleted(savedReps !== undefined ? savedReps : 0);
     setAutoRunning(false);
     completionHandled.current = false;
-  }, [reps, currentSet]);
+  }, [reps, currentSet]); 
 
   useEffect(() => {
     let timer;
     if (autoRunning && completed < reps) {
       timer = setTimeout(() => {
         setCompleted(prev => prev + 1);
-      }, 2000); // 2 seconds per rep, as in the template
+      }, 2000); 
     }
     return () => clearTimeout(timer);
   }, [autoRunning, completed, reps]);
@@ -63,6 +80,7 @@ const NewRepCounter = ({ reps, onComplete, currentSet, totalSets }) => {
               </TouchableOpacity>
               {!autoRunning && !isComplete && (
                   <TouchableOpacity onPress={incrementRep} className="w-16 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primaryLight }}>
+                     <Text style={{color: colors.primary, fontWeight: 'bold'}}>+</Text>
                   </TouchableOpacity>
               )}
             </View>

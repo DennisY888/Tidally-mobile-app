@@ -5,22 +5,53 @@ import { useTheme } from '../../context/ThemeContext';
 import { Play, Pause } from 'lucide-react-native';
 import { AppState } from 'react-native';
 
-const NewTimer = ({ duration, isRunning, isPaused, onComplete, onToggleTimer, currentSet, totalSets }) => {
+const NewTimer = ({ 
+  duration, 
+  isRunning, 
+  isPaused, 
+  onComplete, 
+  onToggleTimer, 
+  currentSet, 
+  totalSets, 
+  savedTimeLeft, 
+  onUpdate       
+}) => {
   const { colors } = useTheme();
-  const [timeLeft, setTimeLeft] = useState(duration);
 
+  const getInitialTime = () => {
+    if (savedTimeLeft !== undefined && savedTimeLeft !== null) {
+      return savedTimeLeft;
+    }
+    return duration;
+  };
+
+  const [timeLeft, setTimeLeft] = useState(getInitialTime);
+  
+  const timeLeftRef = useRef(timeLeft);
   const appState = useRef(AppState.currentState);
   const backgroundTimeRef = useRef(null);
 
   useEffect(() => {
-    setTimeLeft(duration);
-  }, [duration, currentSet]);
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  useEffect(() => {
+    const newVal = (savedTimeLeft !== undefined && savedTimeLeft !== null) ? savedTimeLeft : duration;
+    setTimeLeft(newVal);
+    timeLeftRef.current = newVal;
+  }, [duration, currentSet]); 
+
+  useEffect(() => {
+    return () => {
+      if (onUpdate) {
+        onUpdate(timeLeftRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const actuallyRunning = isRunning && !isPaused;
-    if (!actuallyRunning || timeLeft <= 0) {
-      return; 
-    }
+    if (!actuallyRunning || timeLeft <= 0) return;
 
     const interval = setInterval(() => {
       setTimeLeft(prevTime => {
@@ -44,12 +75,17 @@ const NewTimer = ({ duration, isRunning, isPaused, onComplete, onToggleTimer, cu
       if (appState.current.match(/inactive|background/) && nextAppState === "active") {
         if (backgroundTimeRef.current && actuallyRunning) { 
           const inactiveDuration = Math.round((Date.now() - backgroundTimeRef.current) / 1000);
-          setTimeLeft(prevTime => Math.max(0, prevTime - inactiveDuration));
+          setTimeLeft(prevTime => {
+            const val = Math.max(0, prevTime - inactiveDuration);
+            if (onUpdate) onUpdate(val);
+            return val;
+          });
         }
         backgroundTimeRef.current = null;
       } 
       else if (nextAppState.match(/inactive|background/)) {
         backgroundTimeRef.current = Date.now();
+        if (onUpdate) onUpdate(timeLeftRef.current);
       }
       appState.current = nextAppState;
     });
