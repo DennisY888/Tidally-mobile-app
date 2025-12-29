@@ -12,6 +12,7 @@ import WaveBackground from '../../components/WorkoutPlay/WaveBackground';
 import NewExerciseItem from '../../components/WorkoutPlay/NewExerciseItem';
 import { X, Clock } from 'lucide-react-native';
 
+
 export default function WorkoutPlay() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -34,22 +35,7 @@ export default function WorkoutPlay() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const flatListRef = useRef(null);
 
-  // Auto-advance
-  useEffect(() => {
-    if (!sessionExercises || sessionExercises.length === 0 || workoutComplete) return;
-    
-    let timeoutId;
-    const currentEx = sessionExercises[currentExerciseIndex];
-    if (!currentEx || currentEx.remainingSets === 0) {
-       const nextIndex = sessionExercises.findIndex((ex, idx) => idx >= currentExerciseIndex && ex.remainingSets > 0);
-       if (nextIndex !== -1 && nextIndex !== currentExerciseIndex) {
-          timeoutId = setTimeout(() => setCurrentExerciseIndex(nextIndex), 500);
-       }
-    }
-    return () => clearTimeout(timeoutId);
-  }, [sessionExercises, currentExerciseIndex, workoutComplete]);
 
-  // Scroll to active
   useEffect(() => {
     if (!workoutComplete && !isLoading && sessionExercises.length > 0) {
       setTimeout(() => {
@@ -65,20 +51,38 @@ export default function WorkoutPlay() {
     }
   }, [currentExerciseIndex, workoutComplete, isLoading]);
 
+
   useEffect(() => {
       navigation.setOptions({ headerShown: false });
   }, []);
+
 
   const handleExit = async () => {
     if (!workoutComplete) await saveSession();
     router.back();
   };
 
-  // --- PASS INDEX TO HOOK ---
+
   const onCompleteSet = (exerciseIndex) => {
     handleSetComplete(exerciseIndex);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (exerciseIndex === currentExerciseIndex) {
+        const currentEx = sessionExercises[exerciseIndex];
+        const completed = (currentEx.completedSets || 0) + 1;
+        const total = currentEx.sets || 0;
+
+        if (completed >= total) {
+             const nextIndex = sessionExercises.findIndex((ex, idx) => 
+                 idx > exerciseIndex && (ex.completedSets || 0) < (ex.sets || 0)
+             );
+             if (nextIndex !== -1) {
+                 setTimeout(() => setCurrentExerciseIndex(nextIndex), 800);
+             }
+        }
+    }
   };
+
   
   const onToggleTimer = (exerciseIndex) => { 
     toggleTimer(exerciseIndex); 

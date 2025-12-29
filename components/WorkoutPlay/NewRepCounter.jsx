@@ -58,6 +58,12 @@ const NewRepCounter = ({
   
   const progress = reps > 0 ? (completed / reps) * 100 : 0;
 
+  const decrementRep = () => { 
+    if (!isComplete && completed > 0) {
+        setCompleted(prev => prev - 1); 
+    }
+  };
+
   return (
     <View className="w-full">
       <View className="relative overflow-hidden rounded-xl shadow-lg border" style={{ backgroundColor: colors.background, borderColor: colors.divider }}>
@@ -74,14 +80,22 @@ const NewRepCounter = ({
                 <Text className="text-4xl font-semibold" style={{ color: colors.textSecondary }}>{reps}</Text>
               </View>
             </View>
-            <View className="flex-col space-y-2">
+            <View className="flex-col space-y-2 items-center">
               <TouchableOpacity onPress={toggleAutoMode} disabled={isComplete} className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: autoRunning ? colors.error + '20' : colors.primary }}>
                 {autoRunning ? <Pause size={28} color={colors.error} /> : <Play size={28} color="#FFF" />}
               </TouchableOpacity>
               {!autoRunning && !isComplete && (
-                  <TouchableOpacity onPress={incrementRep} className="w-16 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primaryLight }}>
-                     <Text style={{color: colors.primary, fontWeight: 'bold'}}>+</Text>
-                  </TouchableOpacity>
+                  <View style={{flexDirection: 'row', gap: 10, marginTop: 8}}>
+                      {/* NEW MINUS BUTTON */}
+                      <TouchableOpacity onPress={decrementRep} className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.divider }}>
+                         <Text style={{color: colors.text, fontSize: 18, fontWeight: 'bold'}}>-</Text>
+                      </TouchableOpacity>
+
+                      {/* EXISTING PLUS BUTTON */}
+                      <TouchableOpacity onPress={incrementRep} className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: colors.primaryLight }}>
+                         <Text style={{color: colors.primary, fontSize: 18, fontWeight: 'bold'}}>+</Text>
+                      </TouchableOpacity>
+                  </View>
               )}
             </View>
           </View>

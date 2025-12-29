@@ -81,7 +81,6 @@ export default function WorkoutDetails() {
     try {
       await WorkoutSessionService.deleteSession(workout.id);
       
-      // Populate Context Bridge
       setPlaybackWorkout({
         ...workout,
         exercises: workoutExercises, 
@@ -90,7 +89,14 @@ export default function WorkoutDetails() {
       
       router.push({
         pathname: '/workout-play',
-        params: { isResuming: 'false' } 
+        params: { 
+            isResuming: 'false',
+            workoutId: workout.id,
+            exercises: JSON.stringify(workoutExercises),
+            title: workout.title,
+            category: workout.category,
+            imageUrl: workout.imageUrl
+        } 
       });
     } catch (error) {
       console.error("Error starting workout:", error);

@@ -1,6 +1,6 @@
 // hooks/useWorkoutPlayback.js
 import { useState, useRef, useEffect } from 'react';
-import { Animated } from 'react-native';
+import { Animated, AppState } from 'react-native';
 import { Audio } from 'expo-av';
 import WorkoutSessionService from '../services/WorkoutSessionService';
 import { useActiveWorkout } from '../context/WorkoutDetailContext';
@@ -15,11 +15,15 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExercises, setSessionExercises] = useState([]);
   const [workoutProgress, setWorkoutProgress] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  
   const [workoutComplete, setWorkoutComplete] = useState(false);
   
   const progressAnim = useRef(new Animated.Value(0)).current;
   const timerRef = useRef(null);
+
+  const runningTimeRef = useRef(0);
+  const backgroundTimestampRef = useRef(null);
+
   const sessionDataRef = useRef({
     exercises: [],
     progress: 0,
@@ -30,7 +34,6 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
 
   useEffect(() => { sessionDataRef.current.exercises = sessionExercises; }, [sessionExercises]);
   useEffect(() => { sessionDataRef.current.progress = workoutProgress; }, [workoutProgress]);
-  useEffect(() => { sessionDataRef.current.elapsedTime = elapsedTime; }, [elapsedTime]);
   useEffect(() => { sessionDataRef.current.isComplete = workoutComplete; }, [workoutComplete]);
 
   const updateExerciseData = (index, data) => {
@@ -43,36 +46,41 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     const initialize = async () => {
       setIsLoading(true);
 
-      let targetWorkout = playbackWorkout || params;
+      let targetWorkout = null;
       let rawExercises = [];
 
-      if (targetWorkout.exercises && Array.isArray(targetWorkout.exercises)) {
-        rawExercises = targetWorkout.exercises;
+      if (params.workoutId && params.exercises) {
+          targetWorkout = {
+             id: params.workoutId,
+             title: params.title || 'Untitled Workout',
+             imageUrl: params.imageUrl,
+             category: params.category,
+             description: params.description,
+             est_time: params.est_time,
+          };
+          try {
+            rawExercises = JSON.parse(params.exercises);
+          } catch (e) { rawExercises = []; }
       } 
-      else if (targetWorkout.workoutId) {
-        try {
-          if (params.isResuming === 'true') {
-            const sessionData = await WorkoutSessionService.resumeSession(targetWorkout.workoutId);
+      else if (playbackWorkout) {
+          targetWorkout = playbackWorkout;
+          rawExercises = targetWorkout.exercises || [];
+      }
+      else if (targetWorkout?.workoutId || params.isResuming === 'true') {
+         try {
+            const sessionData = await WorkoutSessionService.resumeSession(params.id || params.workoutId);
             if (sessionData && sessionData.session) {
               targetWorkout = { ...sessionData.workout, ...sessionData.session };
               rawExercises = sessionData.session.exercises || [];
             }
-          } else {
-            const fetched = await WorkoutService.getWorkoutById(targetWorkout.workoutId);
-            if (fetched) {
-              targetWorkout = fetched;
-              rawExercises = fetched.exercises || [];
-            }
-          }
-        } catch (e) { console.error("Rescue fetch failed:", e); }
-      } 
-      else if (typeof targetWorkout.exercises === 'string') {
-         try { rawExercises = JSON.parse(targetWorkout.exercises); } catch (e) {}
+         } catch (e) { console.error("Resume error", e); }
       }
+
+      if (!targetWorkout) targetWorkout = { id: 'unknown', title: 'Loading Error' };
 
       sessionDataRef.current.workoutMeta = {
         id: targetWorkout.id || targetWorkout.workoutId,
-        title: targetWorkout.title || targetWorkout.workoutTitle || 'Untitled Workout',
+        title: targetWorkout.title || targetWorkout.workoutTitle,
         imageUrl: targetWorkout.imageUrl || targetWorkout.workoutImageUrl,
         category: targetWorkout.category,
         description: targetWorkout.description,
@@ -97,8 +105,9 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
 
       setSessionExercises(initialExercises);
       setWorkoutProgress(progressValue);
-      setElapsedTime(elapsedTimeValue);
       progressAnim.setValue(progressValue);
+      
+      runningTimeRef.current = elapsedTimeValue;
       
       await loadSounds();
       setIsLoading(false);
@@ -108,17 +117,32 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
 
     const timer = setInterval(() => {
       if (!sessionDataRef.current.isComplete) {
-        setElapsedTime(prev => prev + 1);
+        runningTimeRef.current += 1;
+        sessionDataRef.current.elapsedTime = runningTimeRef.current;
       }
     }, 1000);
     timerRef.current = timer;
 
+    const subscription = AppState.addEventListener('change', nextAppState => {
+        if (nextAppState.match(/inactive|background/)) {
+            backgroundTimestampRef.current = Date.now();
+        } else if (nextAppState === 'active' && backgroundTimestampRef.current) {
+            const diff = Math.floor((Date.now() - backgroundTimestampRef.current) / 1000);
+            if (diff > 0) {
+                runningTimeRef.current += diff;
+                sessionDataRef.current.elapsedTime = runningTimeRef.current;
+            }
+            backgroundTimestampRef.current = null;
+        }
+    });
+
     return () => {
       unloadSounds();
       if (timerRef.current) clearInterval(timerRef.current);
+      subscription.remove(); 
       saveSessionState();
     };
-  }, [params.id, isResuming]); 
+  }, [params.workoutId, isResuming]); 
 
 
   useEffect(() => {
@@ -231,7 +255,7 @@ export const useWorkoutPlayback = (params, isResuming = false) => {
     isLoading,
     sessionExercises,
     workoutProgress,
-    elapsedTime,
+    elapsedTime: runningTimeRef.current,
     workoutComplete,
     progressAnim,
     formatTime,
