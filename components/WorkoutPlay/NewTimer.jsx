@@ -1,6 +1,6 @@
 // components/WorkoutPlay/NewTimer.jsx
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Play, Pause } from 'lucide-react-native';
 import { AppState } from 'react-native';
@@ -112,23 +112,33 @@ const NewTimer = ({
   };
 
   return (
-    <View className="w-full">
-      <View className="relative w-full overflow-hidden rounded-2xl shadow-lg border" style={{ backgroundColor: colors.background, borderColor: colors.divider }}>
-        <View className="px-6 pt-6 pb-6">
-          <View className="flex-row items-center justify-between mb-6">
+    <View style={styles.container}>
+      <View style={[styles.card, { backgroundColor: colors.background, borderColor: colors.divider }]}>
+        <View style={styles.content}>
+          <View style={styles.topRow}>
             <View>
-              <View className="px-2 py-0.5 rounded-full self-start" style={{ backgroundColor: colors.primaryLight }}>
-                <Text className="text-xs font-semibold" style={{ color: colors.primary }}>SET {currentSet}/{totalSets}</Text>
+              <View style={[styles.badge, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[styles.badgeText, { color: colors.primary }]}>SET {currentSet}/{totalSets}</Text>
               </View>
-              <Text className="text-6xl font-bold tracking-tighter" style={{ color: getTimeColor() }}>{formatTime(timeLeft)}</Text>
+              <Text style={[styles.timerText, { color: getTimeColor() }]}>{formatTime(timeLeft)}</Text>
             </View>
-            <TouchableOpacity onPress={onToggleTimer} disabled={timeLeft <= 0} className="w-16 h-16 rounded-full items-center justify-center shadow-lg" style={{ backgroundColor: showPauseIcon ? colors.error + '20' : colors.primary }}>
+            <TouchableOpacity 
+                onPress={onToggleTimer} 
+                disabled={timeLeft <= 0} 
+                style={[styles.playButton, { backgroundColor: showPauseIcon ? colors.error + '20' : colors.primary }]}
+            >
               {showPauseIcon ? <Pause size={28} color={colors.error} /> : <Play size={28} color="#FFF" />}
             </TouchableOpacity>
           </View>
-          <View className="flex-row space-x-1">
+          <View style={styles.dotsRow}>
             {Array.from({ length: 10 }).map((_, i) => (
-              <View key={i} className="flex-1 h-2 rounded-full" style={{ backgroundColor: progress >= (i + 1) * 10 ? colors.primary : colors.primaryLight }}/>
+              <View 
+                key={i} 
+                style={[
+                    styles.progressDot, 
+                    { backgroundColor: progress >= (i + 1) * 10 ? colors.primary : colors.primaryLight }
+                ]}
+              />
             ))}
           </View>
         </View>
@@ -136,5 +146,22 @@ const NewTimer = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+    container: { width: '100%' },
+    card: {
+        position: 'relative', width: '100%', overflow: 'hidden', borderRadius: 16,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5,
+        borderWidth: 1,
+    },
+    content: { padding: 24 },
+    topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+    badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999 },
+    badgeText: { fontSize: 12, fontFamily: 'outfit-medium' },
+    timerText: { fontSize: 60, fontFamily: 'outfit-bold', letterSpacing: -2 },
+    playButton: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', shadowOpacity: 0.2, elevation: 4 },
+    dotsRow: { flexDirection: 'row', gap: 4 },
+    progressDot: { flex: 1, height: 8, borderRadius: 4 },
+});
 
 export default NewTimer;

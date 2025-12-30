@@ -1,7 +1,7 @@
 // components/WorkoutPlay/NewExerciseItem.jsx
 
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, { 
@@ -39,15 +39,13 @@ const NewExerciseItem = ({
             ctx.startX = translateX.value;
         },
         onActive: (event, ctx) => {
-            if (!isActive || isCompleted || exercise.time) return;
-            
+            if (!isActive || isCompleted) return;
             if (event.translationX > 0) {
                 translateX.value = event.translationX;
             }
         },
         onEnd: (event) => {
-            if (!isActive || isCompleted || exercise.time) return;
-            
+            if (!isActive || isCompleted) return;
             if (event.translationX > 80) {
                 runOnJS(onCompleteSet)(currentSetIndex);
             }
@@ -55,44 +53,58 @@ const NewExerciseItem = ({
         },
     });
 
+    const containerStyle = {
+        backgroundColor: isActive ? colors.background : colors.lightGray,
+        borderColor: isActive ? colors.primary : 'transparent',
+        shadowColor: isActive ? colors.primary : 'transparent',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isActive ? 0.1 : 0,
+        shadowRadius: 15,
+        elevation: isActive ? 8 : 0
+    };
+
     return (
         <TouchableOpacity onPress={onActivate} disabled={isActive} activeOpacity={0.8}>
-            <View className="absolute inset-0 items-center justify-end flex-row pr-6 rounded-xl" style={{ backgroundColor: colors.success + '20' }} />
-            <PanGestureHandler onGestureEvent={gestureHandler}>
+            <View style={[styles.backgroundFill, { backgroundColor: colors.success + '20' }]} />
+            
+            <PanGestureHandler 
+                onGestureEvent={gestureHandler}
+                activeOffsetX={[-30, 30]} 
+                failOffsetY={[-30, 30]}
+            >
                 <Animated.View style={animatedStyle}>
-                    <View className={`relative p-4 rounded-xl border-2`} style={{
-                        backgroundColor: isActive ? colors.background : colors.lightGray,
-                        borderColor: isActive ? colors.primary : 'transparent',
-                        shadowColor: isActive ? colors.primary : 'transparent',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: isActive ? 0.1 : 0,
-                        shadowRadius: 15,
-                        elevation: isActive ? 8 : 0
-                    }}>
-                        <View className="flex-row items-center justify-between">
-                            <View className="flex-1">
-                                <Text className="font-semibold text-lg" style={{ color: isActive ? colors.text : colors.textSecondary }}>{exercise.name}</Text>
-                                <View className="flex-row items-center mt-1">
-                                <Text className="text-sm" style={{ color: colors.textTertiary }}>
-                                    {exercise.time ? `${exercise.time}s` : `${exercise.reps} reps`}
+                    <View style={[styles.cardContainer, containerStyle]}>
+                        <View style={styles.headerRow}>
+                            <View style={styles.titleContainer}>
+                                <Text style={[styles.exerciseTitle, { color: isActive ? colors.text : colors.textSecondary }]}>
+                                    {exercise.name}
                                 </Text>
-                                <View className="flex-row items-center ml-3 space-x-1.5">
-                                    {Array.from({ length: exercise.sets }).map((_, i) => (
-                                    <View key={i} className={`w-2 h-2 rounded-full transition-all duration-300 ${i === currentSetIndex && isActive && !isCompleted ? 'scale-150' : ''}`} style={{
-                                        backgroundColor: i < completedSetsCount ? colors.success : (i === currentSetIndex && isActive) ? colors.primary : colors.divider
-                                    }}/>
-                                    ))}
-                                </View>
+                                <View style={styles.subtitleRow}>
+                                    <Text style={[styles.subtitleText, { color: colors.textTertiary }]}>
+                                        {exercise.time ? `${exercise.time}s` : `${exercise.reps} reps`}
+                                    </Text>
+                                    <View style={styles.dotsContainer}>
+                                        {Array.from({ length: exercise.sets }).map((_, i) => (
+                                            <View 
+                                                key={i} 
+                                                style={[
+                                                    styles.dot, 
+                                                    i === currentSetIndex && isActive && !isCompleted ? styles.activeDotScale : {},
+                                                    { backgroundColor: i < completedSetsCount ? colors.success : (i === currentSetIndex && isActive) ? colors.primary : colors.divider }
+                                                ]}
+                                            />
+                                        ))}
+                                    </View>
                                 </View>
                             </View>
                         </View>
 
                         {isActive && (
-                            <View className="mt-4">
+                            <View style={styles.contentContainer}>
                                 {isCompleted ? (
-                                    <View className="items-center py-8">
+                                    <View style={styles.completedContainer}>
                                         <Check color={colors.success} size={32}/>
-                                        <Text className="text-lg font-semibold" style={{color: colors.success}}>Exercise Complete!</Text>
+                                        <Text style={[styles.completedText, {color: colors.success}]}>Exercise Complete!</Text>
                                     </View>
                                 ) : exercise.time ? (
                                     <NewTimer 
@@ -124,4 +136,34 @@ const NewExerciseItem = ({
         </TouchableOpacity>
     );
 };
+
+const styles = StyleSheet.create({
+    backgroundFill: {
+        position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
+        justifyContent: 'center', alignItems: 'flex-end',
+        paddingRight: 24, borderRadius: 12,
+    },
+    cardContainer: {
+        position: 'relative',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 2,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    titleContainer: { flex: 1 },
+    exerciseTitle: { fontSize: 18, fontFamily: 'outfit-bold' },
+    subtitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    subtitleText: { fontSize: 14, fontFamily: 'outfit' },
+    dotsContainer: { flexDirection: 'row', alignItems: 'center', marginLeft: 12, gap: 6 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    activeDotScale: { transform: [{ scale: 1.5 }] },
+    contentContainer: { marginTop: 16 },
+    completedContainer: { alignItems: 'center', paddingVertical: 32 },
+    completedText: { fontSize: 18, fontFamily: 'outfit-bold', marginTop: 8 },
+});
+
 export default NewExerciseItem;

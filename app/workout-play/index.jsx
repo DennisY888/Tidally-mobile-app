@@ -1,7 +1,20 @@
 // app/workout-play/index.jsx
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, SafeAreaView, StatusBar, StyleSheet, Animated as RNAnimated, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  StatusBar, 
+  StyleSheet, 
+  Animated as RNAnimated, 
+  ActivityIndicator,
+  LayoutAnimation,
+  Platform,
+  UIManager
+} from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
@@ -12,6 +25,11 @@ import WaveBackground from '../../components/WorkoutPlay/WaveBackground';
 import NewExerciseItem from '../../components/WorkoutPlay/NewExerciseItem';
 import { X, Clock } from 'lucide-react-native';
 
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 export default function WorkoutPlay() {
   const params = useLocalSearchParams();
@@ -35,7 +53,6 @@ export default function WorkoutPlay() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const flatListRef = useRef(null);
 
-
   useEffect(() => {
     if (!workoutComplete && !isLoading && sessionExercises.length > 0) {
       setTimeout(() => {
@@ -51,17 +68,14 @@ export default function WorkoutPlay() {
     }
   }, [currentExerciseIndex, workoutComplete, isLoading]);
 
-
   useEffect(() => {
       navigation.setOptions({ headerShown: false });
   }, []);
-
 
   const handleExit = async () => {
     if (!workoutComplete) await saveSession();
     router.back();
   };
-
 
   const onCompleteSet = (exerciseIndex) => {
     handleSetComplete(exerciseIndex);
@@ -77,12 +91,14 @@ export default function WorkoutPlay() {
                  idx > exerciseIndex && (ex.completedSets || 0) < (ex.sets || 0)
              );
              if (nextIndex !== -1) {
-                 setTimeout(() => setCurrentExerciseIndex(nextIndex), 800);
+                 setTimeout(() => {
+                     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                     setCurrentExerciseIndex(nextIndex);
+                 }, 800);
              }
         }
     }
   };
-
   
   const onToggleTimer = (exerciseIndex) => { 
     toggleTimer(exerciseIndex); 
@@ -104,28 +120,39 @@ export default function WorkoutPlay() {
   }, [sessionExercises, currentExerciseIndex]);
 
   const renderHeader = () => (
-    <View className="mb-6 px-4 pt-4">
-      <View className="flex-row items-center justify-between mb-2 mt-4">
-        <Text className="text-3xl font-bold w-4/5" style={{ color: colors.text }} numberOfLines={2}>
+    <View style={styles.headerContainer}>
+      <View style={styles.headerTopRow}>
+        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={2}>
             {params.title || 'Workout'}
         </Text>
-        <TouchableOpacity onPress={handleExit} className="flex-row items-center px-3 py-1 rounded-full border" style={{ backgroundColor: colors.background, borderColor: colors.divider }}>
+        <TouchableOpacity 
+            onPress={handleExit} 
+            style={[styles.exitButton, { backgroundColor: colors.background, borderColor: colors.divider }]}
+        >
           <X size={14} color={colors.primary} />
-          <Text className="text-sm font-medium ml-1" style={{ color: colors.primary }}>Exit</Text>
+          <Text style={[styles.exitButtonText, { color: colors.primary }]}>Exit</Text>
         </TouchableOpacity>
       </View>
-      <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
+      
+      <View style={styles.headerInfoRow}>
+          <View style={styles.infoItem}>
               <Clock size={14} color={colors.textSecondary} />
-              <Text className="text-sm ml-1" style={{ color: colors.textSecondary }}>{remainingTime} left</Text>
+              <Text style={[styles.infoText, { color: colors.textSecondary }]}>{remainingTime} left</Text>
           </View>
       </View>
-      <View className="mt-4 w-full h-2 rounded-full" style={{ backgroundColor: colors.primaryLight }}>
-        <RNAnimated.View className="h-full rounded-full" style={{ width: `${workoutProgress * 100}%`, backgroundColor: colors.primary }} />
+      
+      <View style={[styles.progressBarBackground, { backgroundColor: colors.primaryLight }]}>
+        <RNAnimated.View 
+            style={[
+                styles.progressBarFill, 
+                { width: `${workoutProgress * 100}%`, backgroundColor: colors.primary }
+            ]} 
+        />
       </View>
-      <View className="flex-row justify-between mt-1">
-          <Text className="text-xs" style={{ color: colors.textSecondary }}>Progress</Text>
-          <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+      
+      <View style={styles.progressTextRow}>
+          <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Progress</Text>
+          <Text style={[styles.progressValue, { color: colors.textSecondary }]}>
             {sessionExercises.reduce((acc, ex) => acc + (ex.completedSets || 0), 0)} of {sessionExercises.reduce((acc, ex) => acc + (ex.sets || 0), 0)} sets
           </Text>
       </View>
@@ -147,9 +174,12 @@ export default function WorkoutPlay() {
       <SafeAreaView style={styles.safeArea}>
         {workoutComplete ? (
             <View style={styles.completionContainer}>
-                 <Text className="text-4xl font-bold" style={{color: colors.primary}}>Workout Complete!</Text>
-                 <TouchableOpacity onPress={() => router.replace('/(tabs)/home')} className="mt-6 px-6 py-3 rounded-full" style={{backgroundColor: colors.primary}}>
-                    <Text className="text-white font-bold">Finish</Text>
+                 <Text style={[styles.completionTitle, {color: colors.primary}]}>Workout Complete!</Text>
+                 <TouchableOpacity 
+                    onPress={() => router.replace('/(tabs)/home')} 
+                    style={[styles.finishButton, {backgroundColor: colors.primary}]}
+                 >
+                    <Text style={styles.finishButtonText}>Finish</Text>
                  </TouchableOpacity>
             </View>
         ) : (
@@ -158,7 +188,7 @@ export default function WorkoutPlay() {
                 data={sessionExercises}
                 ListHeaderComponent={renderHeader}
                 renderItem={({ item, index }) => (
-                    <View className="px-4 my-2">
+                    <View style={styles.itemWrapper}>
                          <NewExerciseItem
                             exercise={item}
                             isActive={index === currentExerciseIndex}
@@ -170,7 +200,7 @@ export default function WorkoutPlay() {
                         />
                     </View>
                 )}
-                keyExtractor={(item, index) => item.id ? item.id + index : `exercise-${index}`}
+                keyExtractor={(item, index) => `${item.id || 'ex'}-${index}`}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
                 scrollEnabled={true} 
@@ -183,7 +213,25 @@ export default function WorkoutPlay() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    safeArea: { flex: 1, zIndex: 10, paddingTop: 20 },
+    safeArea: { flex: 1, zIndex: 10 }, 
     completionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    completionTitle: { fontSize: 32, fontFamily: 'outfit-bold', marginBottom: 24 },
+    finishButton: { paddingHorizontal: 32, paddingVertical: 16, borderRadius: 9999 },
+    finishButtonText: { color: '#fff', fontFamily: 'outfit-bold', fontSize: 16 },
     listContent: { paddingBottom: 50 },
+    itemWrapper: { paddingHorizontal: 16, marginVertical: 8 },
+    
+    headerContainer: { marginBottom: 24, paddingHorizontal: 16, paddingTop: 16 },
+    headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 16 },
+    headerTitle: { fontSize: 24, fontFamily: 'outfit-bold', width: '80%' },
+    exitButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, borderWidth: 1 },
+    exitButtonText: { fontSize: 14, fontFamily: 'outfit-medium', marginLeft: 4 },
+    headerInfoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    infoItem: { flexDirection: 'row', alignItems: 'center' },
+    infoText: { fontSize: 14, fontFamily: 'outfit', marginLeft: 4 },
+    progressBarBackground: { marginTop: 16, width: '100%', height: 8, borderRadius: 9999, overflow: 'hidden' },
+    progressBarFill: { height: '100%', borderRadius: 9999 },
+    progressTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+    progressLabel: { fontSize: 12, fontFamily: 'outfit' },
+    progressValue: { fontSize: 12, fontFamily: 'outfit-medium' },
 });
