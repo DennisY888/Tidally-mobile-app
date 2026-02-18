@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../config/FirebaseConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export const WorkoutService = {
@@ -320,8 +321,12 @@ searchWorkouts: async (searchTerm, userEmail) => {
         await updateDoc(favRef, { favorites: newFavs });
       }
 
-      const WorkoutSessionService = (await import('./WorkoutSessionService')).default;
-      await WorkoutSessionService.deleteSession(workoutId);
+      const sessionData = await AsyncStorage.getItem('tidally_workout_sessions');
+      if (sessionData) {
+        const sessions = JSON.parse(sessionData);
+        const updatedSessions = sessions.filter(s => s.workoutId !== workoutId);
+        await AsyncStorage.setItem('tidally_workout_sessions', JSON.stringify(updatedSessions));
+      }
       
       return true;
     } catch (error) {
