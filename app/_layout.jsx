@@ -127,6 +127,11 @@ export default function RootLayout() {
     'outfit': require('./../assets/fonts/Outfit-Regular.ttf'),
     'outfit-medium': require('./../assets/fonts/Outfit-Medium.ttf'),
     'outfit-bold': require('./../assets/fonts/Outfit-Bold.ttf'),
+    'bebas-neue': require('./../assets/fonts/BebasNeue-Regular.ttf'),
+    'syne-regular': require('./../assets/fonts/Syne-Regular.ttf'),
+    'syne-medium': require('./../assets/fonts/Syne-Medium.ttf'),
+    'syne-bold': require('./../assets/fonts/Syne-Bold.ttf'),
+    'syne-extrabold': require('./../assets/fonts/Syne-ExtraBold.ttf'),
   });
 
   if (!fontsLoaded) {

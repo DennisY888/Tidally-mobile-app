@@ -2,21 +2,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Typography } from '../../constants/Colors';
 
-/**
- * App logo component with icon and tagline
- * 
- * @returns {React.ReactNode}
- */
 const AppLogo = () => {
   return (
     <View style={styles.container}>
       <View style={styles.logoRow}>
-        <Ionicons name="water" size={40} color="white" />
-        <Text style={styles.logoText}>
-          TIDALLY
-        </Text>
+        <Ionicons name="water" size={34} color="rgba(0, 217, 255, 0.95)" />
+        <Text style={styles.logoText}>TIDALLY</Text>
       </View>
       <Text style={styles.tagline}>
         Discover and Share Amazing Fitness Journeys
@@ -26,34 +18,34 @@ const AppLogo = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    alignItems: 'center' 
+  container: {
+    alignItems: 'center',
   },
-  logoRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 8 
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   logoText: {
-    ...Typography.largeTitle,
-    fontSize: 48,
-    color: 'white',
-    letterSpacing: 1.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 6,
-    marginLeft: 8,
+    fontFamily: 'bebas-neue',        // Phase 2: Bebas Neue display font
+    fontSize: 56,                     // Bebas Neue is naturally condensed — 56px reads like Outfit-bold 48px
+    color: '#FFFFFF',
+    letterSpacing: 5,                 // Bebas Neue needs generous letter-spacing
+    marginLeft: 10,
+    // Cyan glow — matches design bible --glow-cyan
+    textShadowColor: 'rgba(0, 217, 255, 0.4)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
   },
   tagline: {
-    fontFamily: 'outfit-medium',
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontFamily: 'syne-regular',       // Phase 2: Syne body font
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.5)',
     textAlign: 'center',
     marginHorizontal: 20,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  }
+    letterSpacing: 0.6,
+    lineHeight: 20,
+  },
 });
 
 export default AppLogo;

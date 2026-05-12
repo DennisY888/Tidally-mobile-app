@@ -2,48 +2,60 @@
 
 export const Colors = {
   light: {
-    text: '#1A2B3D', // Deep slate blue
-    textSecondary: '#536B88', // Medium slate blue
-    textTertiary: '#8096B0', // Light slate blue
-    background: '#FFFFFF', // Pure white
-    backgroundSecondary: '#F7FAFD', // Slightly blue-tinted background
-    tint: '#2E5C8A', // Deep ocean blue
-    primary: '#2E5C8A', // Deep ocean blue
-    primaryDark: '#1D4875', // Darker ocean blue for pressed states
-    primaryLight: '#E9F0F8', // Very light blue for backgrounds
-    secondary: '#88B6E0', // Soft sky blue
-    secondaryDark: '#5C98CE', // Darker sky blue for pressed states
-    accent: '#64D2FF', // Bright cyan for highlights
-    success: '#2ECB8E', // Mint green
-    warning: '#FFB547', // Amber
-    error: '#F87272', // Coral red
-    lightGray: '#F6F9FC', // Ice blue
-    divider: '#E5EDF5', // Light divider color
-    shadow: 'rgba(37, 99, 235, 0.08)', // Subtle blue shadow
+    // UNCHANGED — light mode users unaffected
+    text: '#1A2B3D',
+    textSecondary: '#536B88',
+    textTertiary: '#8096B0',
+    background: '#FFFFFF',
+    backgroundSecondary: '#F7FAFD',
+    tint: '#2E5C8A',
+    primary: '#2E5C8A',
+    primaryDark: '#1D4875',
+    primaryLight: '#E9F0F8',
+    secondary: '#88B6E0',
+    secondaryDark: '#5C98CE',
+    accent: '#64D2FF',
+    success: '#2ECB8E',
+    warning: '#FFB547',
+    error: '#F87272',
+    lightGray: '#F6F9FC',
+    divider: '#E5EDF5',
+    shadow: 'rgba(37, 99, 235, 0.08)',
   },
   dark: {
-    text: '#E5EDF5', // Soft white with blue tint
-    textSecondary: '#A0B4CB', // Medium gray-blue
-    textTertiary: '#6B839E', // Darker gray-blue
-    background: '#0A1829', // Deep ocean night
-    backgroundSecondary: '#112436', // Slightly lighter background
-    tint: '#64A1D6', // Bright ocean blue
-    primary: '#64A1D6', // Bright ocean blue
-    primaryDark: '#4A87BC', // Darker ocean blue for pressed states
-    primaryLight: '#1C2E47', // Dark blue with slight transparency
-    secondary: '#3D718F', // Muted ocean blue
-    secondaryDark: '#2A5A78', // Darker muted blue for pressed states
-    accent: '#4AADDA', // Deeper cyan for highlights
-    success: '#26A676', // Darker mint green
-    warning: '#DB9A3E', // Darker amber
-    error: '#D65F5F', // Darker coral red
-    lightGray: '#1C2B3A', // Dark slate
-    divider: '#2A3D53', // Dark divider color
-    shadow: 'rgba(9, 30, 66, 0.35)', // Deep ocean shadow
+    // PRIMARY TEXT — 100% white per design bible
+    text: '#FFFFFF',
+    // SECONDARY — white at 60% opacity
+    textSecondary: 'rgba(255, 255, 255, 0.6)',
+    // TERTIARY — white at 35% opacity
+    textTertiary: 'rgba(255, 255, 255, 0.35)',
+    // BACKGROUNDS — deep ocean palette
+    background: '#0A1525',          // elevated surface (cards, headers)
+    backgroundSecondary: '#020B18', // base layer (screen backgrounds)
+    // PRIMARY ACCENT — bioluminescent cyan (THE most important change)
+    tint: '#00D9FF',
+    primary: '#00D9FF',
+    primaryDark: '#00AECF',         // slightly darker cyan for pressed states
+    primaryLight: 'rgba(0, 217, 255, 0.08)', // very faint cyan tint for backgrounds
+    // SECONDARY ACCENT — seafoam
+    secondary: '#7FFFD4',
+    secondaryDark: '#5ECFAA',
+    // HIGHLIGHT — same cyan family
+    accent: '#00D9FF',
+    // SEMANTIC COLORS
+    success: '#7FFFD4',             // seafoam = positive/complete
+    warning: '#FFB347',             // amber unchanged — still readable on dark
+    error: '#FF6B6B',               // design bible --color-coral
+    lightGray: '#0F1E32',           // dark slate for subtle fills
+    // STRUCTURAL
+    divider: 'rgba(255, 255, 255, 0.08)',  // hairline dividers
+    shadow: 'rgba(0, 0, 0, 0.4)',          // deep shadow
   },
 };
 
-// Typography scale (This should remain as it was)
+// Typography — UNCHANGED (Outfit fonts still used app-wide for now)
+// Login screen is already using Bebas Neue + Syne
+// We will migrate other screens to Syne gradually
 export const Typography = {
   largeTitle: { fontFamily: 'outfit-bold', fontSize: 34, lineHeight: 41 },
   title1: { fontFamily: 'outfit-bold', fontSize: 28, lineHeight: 34 },
@@ -58,23 +70,24 @@ export const Typography = {
   caption2: { fontFamily: 'outfit', fontSize: 11, lineHeight: 13 },
 };
 
-// Spacing system (This should remain as it was)
+// Spacing — UNCHANGED
 export const Spacing = {
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48,
 };
 
-// Border radius (This should remain as it was)
+// BorderRadius — UNCHANGED
 export const BorderRadius = {
   xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, full: 9999,
 };
 
-// Your original Shadows object
+// Shadows — dark mode shadows updated to match new palette
 export const Shadows = {
   light: {
+    // UNCHANGED
     small: {
       shadowColor: Colors.light.shadow,
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 1, // With RGBA colors, opacity is baked in. Set this to 1.
+      shadowOpacity: 1,
       shadowRadius: 3,
       elevation: 2,
     },
@@ -95,25 +108,25 @@ export const Shadows = {
   },
   dark: {
     small: {
-      shadowColor: Colors.dark.shadow,
+      shadowColor: 'rgba(0, 0, 0, 1)',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 1,
-      shadowRadius: 3,
-      elevation: 2,
+      shadowOpacity: 0.4,
+      shadowRadius: 4,
+      elevation: 3,
     },
     medium: {
-      shadowColor: Colors.dark.shadow,
+      shadowColor: 'rgba(0, 0, 0, 1)',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 1,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowOpacity: 0.5,
+      shadowRadius: 12,
+      elevation: 6,
     },
     large: {
-      shadowColor: Colors.dark.shadow,
+      shadowColor: 'rgba(0, 0, 0, 1)',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 1,
-      shadowRadius: 16,
-      elevation: 8,
+      shadowOpacity: 0.6,
+      shadowRadius: 20,
+      elevation: 10,
     },
   },
 };

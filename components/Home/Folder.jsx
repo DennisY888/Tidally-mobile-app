@@ -177,8 +177,8 @@ export default function Folder({ category, user }) {
                 width="100%"
                 height="100%"
                 style={StyleSheet.absoluteFillObject} 
-                primaryColor={isSelected ? colors.primary : '#e1f1fe'}
-                secondaryColor={isSelected ? colors.secondary : '#b6dbfc'}
+                primaryColor={isSelected ? colors.primary : isDark ? 'rgba(0, 217, 255, 0.12)' : '#e1f1fe'}
+                secondaryColor={isSelected ? colors.secondary : isDark ? 'rgba(0, 217, 255, 0.06)' : '#b6dbfc'}
               />
               <View style={styles.contentOverlay}>
                 {item?.imageUrl && (
@@ -204,7 +204,7 @@ export default function Folder({ category, user }) {
       <View style={styles.headerContainer}>
         <Text style={styles.headerText}>Categories</Text>
         <TouchableOpacity style={styles.addButton} onPress={() => setShowCreateForm(prev => !prev)}>
-          <Ionicons name={showCreateForm ? 'close-circle' : 'add-circle'} size={24} color={Colors.light.primary} />
+          <Ionicons name={showCreateForm ? 'close-circle' : 'add-circle'} size={24} color={colors.primary} />
           <Text style={styles.addButtonText}>{showCreateForm ? 'Cancel' : 'Add Folder'}</Text>
         </TouchableOpacity>
       </View>
