@@ -1,14 +1,19 @@
 // components/Profile/ProfileCustomizationModal.jsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MotiView } from 'moti';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useUser } from '@clerk/clerk-expo';
 import ColorPicker from 'react-native-wheel-color-picker';
 
 import { useTheme } from '../../context/ThemeContext';
 import { useUserProfile } from '../../context/UserProfileContext';
+import { storage } from '../../config/FirebaseConfig';
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
 import { showToast } from '../../utils/helpers';
 import { getAnimalList, getAnimalColors, getSVGComponent, adaptColorForDarkMode } from '../../constants/ProfileIcons';
@@ -56,9 +61,15 @@ const rgbToHex = (r, g, b) => {
 export default function ProfileCustomizationModal({ visible, onClose }) {
   const { colors, isDark } = useTheme();
   const { userProfile, updateUserProfile } = useUserProfile();
-  const [step, setStep] = useState(1); 
+  const { user } = useUser();
+  const [step, setStep] = useState(1);
+  const [mode, setMode] = useState(userProfile?.customProfile?.profileType === 'photo' ? 'photo' : 'animal');
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
+
+  // Photo mode state
+  const [photoUri, setPhotoUri] = useState(userProfile?.customProfile?.customImageUrl || null);
+  const [photoDirty, setPhotoDirty] = useState(false);
 
   const [backgroundColor, setBackgroundColor] = useState(
     userProfile?.customProfile?.backgroundColor || colors.primaryLight
@@ -94,6 +105,10 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
           userProfile.customProfile.backgroundColor || colors.primaryLight
         ]
       );
+      if (userProfile.customProfile.profileType === 'photo') {
+        setMode('photo');
+        setPhotoUri(userProfile.customProfile.customImageUrl || null);
+      }
     }
   }, [userProfile, colors.primaryLight]);
 
@@ -105,6 +120,9 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
       setSelectedAnimal(null);
       setSelectedColor(null);
       setSelectedPalette(null);
+      setMode(userProfile?.customProfile?.profileType === 'photo' ? 'photo' : 'animal');
+      setPhotoUri(userProfile?.customProfile?.customImageUrl || null);
+      setPhotoDirty(false);
       // Reset to profile defaults
       setBackgroundColor(userProfile?.customProfile?.backgroundColor || colors.primaryLight);
       setBackgroundType(userProfile?.customProfile?.backgroundType || 'solid');
@@ -115,6 +133,80 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
         ]
       );
     });
+  };
+
+  const pickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showToast('Photo library permission is required.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setPhotoUri(result.assets[0].uri);
+      setPhotoDirty(true);
+    }
+  };
+
+  const handleSavePhoto = async () => {
+    if (!photoUri) {
+      showToast('Please choose a photo first.');
+      return;
+    }
+    if (!user?.primaryEmailAddress?.emailAddress) {
+      showToast('Not signed in.');
+      return;
+    }
+    setIsLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      let downloadUrl = photoUri;
+      // Only re-upload if a new photo was picked (not the already-saved remote URL)
+      if (photoDirty) {
+        const compressed = await manipulateAsync(
+          photoUri,
+          [{ resize: { width: 400 } }],
+          { compress: 0.85, format: SaveFormat.JPEG }
+        );
+        const resp = await fetch(compressed.uri);
+        const blob = await resp.blob();
+        const storageRef = ref(
+          storage,
+          `profile-photos/${user.primaryEmailAddress.emailAddress}/${Date.now()}.jpg`
+        );
+        await uploadBytes(storageRef, blob);
+        downloadUrl = await getDownloadURL(storageRef);
+      }
+
+      const success = await updateUserProfile({
+        customProfile: {
+          ...(userProfile?.customProfile || {}),
+          profileType: 'photo',
+          customImageUrl: downloadUrl,
+          useCustom: true,
+        },
+      });
+
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showToast('Profile photo updated!');
+        handleClose();
+      } else {
+        throw new Error('Update failed');
+      }
+    } catch (error) {
+      console.error('Error saving photo profile:', error);
+      showToast('Failed to upload photo');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
 
@@ -151,9 +243,11 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
 
       const success = await updateUserProfile({
         customProfile: {
+          ...(userProfile?.customProfile || {}),
           animalType: selectedAnimal.key,
           animalColor: selectedColor.name,
-          ...backgroundData, // Spread the background data
+          ...backgroundData,
+          profileType: 'animal',
           useCustom: true
         }
       });
@@ -195,31 +289,123 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
               )}
             </View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {step === 1 && "Choose Your Animal"}
-              {step === 2 && "Pick a Color"}
-              {step === 3 && "Set Background"}
+              {mode === 'photo' ? 'Upload Photo' : (
+                <>
+                  {step === 1 && "Choose Your Animal"}
+                  {step === 2 && "Pick a Color"}
+                  {step === 3 && "Set Background"}
+                </>
+              )}
             </Text>
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Progress Dots */}
-          <View style={styles.progressContainer}>
-            {[1, 2].map((stepNum) => (
-              <MotiView
-                key={stepNum}
-                style={[styles.progressDot, { backgroundColor: stepNum <= step ? colors.primary : colors.divider }]}
-                animate={{ scale: stepNum === step ? 1.2 : 1 }}
-                transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              />
-            ))}
+          {/* Mode switcher: Animal vs Photo */}
+          <View style={styles.modeSwitcher}>
+            {[
+              { key: 'animal', label: 'Animal' },
+              { key: 'photo', label: 'Photo' },
+            ].map((m) => {
+              const active = mode === m.key;
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setMode(m.key);
+                    setStep(1);
+                  }}
+                  style={[
+                    styles.modeButton,
+                    {
+                      backgroundColor: active ? colors.primary : colors.backgroundSecondary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.modeButtonText,
+                    { color: active ? colors.background : colors.text },
+                  ]}>
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
+          {/* Progress Dots — only shown in animal mode */}
+          {mode === 'animal' && (
+            <View style={styles.progressContainer}>
+              {[1, 2].map((stepNum) => (
+                <MotiView
+                  key={stepNum}
+                  style={[styles.progressDot, { backgroundColor: stepNum <= step ? colors.primary : colors.divider }]}
+                  animate={{ scale: stepNum === step ? 1.2 : 1 }}
+                  transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                />
+              ))}
+            </View>
+          )}
 
           {/* Step Content */}
           <View style={styles.content}>
-            {/* Combined Step 1 & 2: Animal and Color Selection */}
-            {step === 1 && (
+            {mode === 'photo' && (
+              <View style={styles.stepContainer}>
+                <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                  Upload any image as your profile photo
+                </Text>
+
+                <View style={styles.photoPreviewWrapper}>
+                  <TouchableOpacity
+                    onPress={pickPhoto}
+                    activeOpacity={0.85}
+                    style={[
+                      styles.photoPreview,
+                      {
+                        borderColor: colors.primary + '50',
+                        backgroundColor: colors.backgroundSecondary,
+                      },
+                    ]}
+                  >
+                    {photoUri ? (
+                      <Image source={{ uri: photoUri }} style={styles.photoPreviewImage} />
+                    ) : (
+                      <View style={styles.photoPlaceholder}>
+                        <Ionicons name="camera-outline" size={48} color={colors.textTertiary} />
+                        <Text style={[styles.photoPlaceholderText, { color: colors.textSecondary }]}>
+                          Tap to choose a photo
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  {photoUri && (
+                    <TouchableOpacity onPress={pickPhoto} style={styles.changePhotoButton}>
+                      <Ionicons name="refresh" size={16} color={colors.primary} />
+                      <Text style={[styles.changePhotoText, { color: colors.primary }]}>
+                        Change photo
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <View style={[styles.saveContainer, { backgroundColor: colors.background }]}>
+                  <ActionButton
+                    title="Save Photo"
+                    icon="checkmark-circle"
+                    onPress={handleSavePhoto}
+                    loading={isLoading}
+                    disabled={isLoading || !photoUri}
+                    style={styles.saveButton}
+                  />
+                </View>
+              </View>
+            )}
+            {mode === 'animal' && step === 1 && (
             <View style={styles.stepContainer}>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Choose your spirit animal and color
@@ -364,7 +550,7 @@ export default function ProfileCustomizationModal({ visible, onClose }) {
             )}
 
             {/* Step 2: Enhanced Background Selection */}
-            {step === 2 && selectedColor && (
+            {mode === 'animal' && step === 2 && selectedColor && (
             <View style={styles.stepContainer}>
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Customize your profile background
@@ -854,5 +1040,63 @@ const styles = StyleSheet.create({
     bottom: -5,
     borderRadius: 65,
     borderWidth: 2,
+  },
+  modeSwitcher: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+  },
+  modeButton: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    minWidth: 110,
+    alignItems: 'center',
+  },
+  modeButtonText: {
+    ...Typography.callout,
+    fontFamily: 'outfit-medium',
+  },
+  photoPreviewWrapper: {
+    alignItems: 'center',
+    marginTop: Spacing.xl,
+  },
+  photoPreview: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    overflow: 'hidden',
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPreviewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  photoPlaceholderText: {
+    ...Typography.callout,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+  },
+  changePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  changePhotoText: {
+    ...Typography.subhead,
+    fontFamily: 'outfit-medium',
+    marginLeft: Spacing.xs,
   },
 });

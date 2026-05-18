@@ -15,6 +15,7 @@ import { Colors } from '../constants/Colors';
 import { FavoritesProvider } from '../hooks/useRealtimeFavorites';
 import { WorkoutDetailProvider } from '../context/WorkoutDetailContext';
 import { UserProfileProvider } from '../context/UserProfileContext';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 // Token cache implementation for Clerk
@@ -63,9 +64,9 @@ function StatusBarController() {
       return;
     }
     
-    // Function to update status bar
+    // Function to update status bar — keep visible so the phone's clock/battery shows
     const updateStatusBar = () => {
-      StatusBar.setHidden(true); // Hide status bar for the entire app
+      StatusBar.setHidden(false);
       StatusBar.setBarStyle(isDark ? 'light-content' : 'dark-content', true);
       if (Platform.OS === 'android') {
         StatusBar.setBackgroundColor(isDark ? colors.background : colors.background);
@@ -101,10 +102,12 @@ function StatusBarController() {
 }
 
 
-// Main app container with theme
+// Main app container with theme — applies safe-area top padding
+// so the status bar (phone clock/battery) doesn't overlap our UI.
 function ThemedApp({ children }) {
   const { colors, isThemeLoaded } = useTheme();
-  
+  const insets = useSafeAreaInsets();
+
   if (!isThemeLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.light.background }}>
@@ -112,9 +115,9 @@ function ThemedApp({ children }) {
       </View>
     );
   }
-  
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
       {children}
     </View>
   );
@@ -138,25 +141,27 @@ export default function RootLayout() {
       tokenCache={tokenCache}
       publishableKey={publishableKey}
     >
-      <NetworkProvider>
-        <ThemeProvider>
-          <StatusBar hidden={true} />
-          <FavoritesProvider>
-            <WorkoutDetailProvider>
-              <UserProfileProvider>
-                  <ThemedApp>
-                    <Stack>
-                      <Stack.Screen name="index" options={{ headerShown: false }} />
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="login/index" options={{ headerShown: false }} />
-                      <Stack.Screen name="stopwatch/index" options={{ headerShown: false }} />
-                    </Stack>
-                  </ThemedApp>
-              </UserProfileProvider>
-            </WorkoutDetailProvider>
-          </FavoritesProvider>
-        </ThemeProvider>
-      </NetworkProvider>
+      <SafeAreaProvider>
+        <NetworkProvider>
+          <ThemeProvider>
+            <StatusBar translucent={false} />
+            <FavoritesProvider>
+              <WorkoutDetailProvider>
+                <UserProfileProvider>
+                    <ThemedApp>
+                      <Stack>
+                        <Stack.Screen name="index" options={{ headerShown: false }} />
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="login/index" options={{ headerShown: false }} />
+                        <Stack.Screen name="stopwatch/index" options={{ headerShown: false }} />
+                      </Stack>
+                    </ThemedApp>
+                </UserProfileProvider>
+              </WorkoutDetailProvider>
+            </FavoritesProvider>
+          </ThemeProvider>
+        </NetworkProvider>
+      </SafeAreaProvider>
     </ClerkProvider>
   );
 }

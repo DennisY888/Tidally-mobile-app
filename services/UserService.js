@@ -23,9 +23,11 @@ export const UserService = {
         customProfile: {
           animalType: null,
           animalColor: null,
-          backgroundColor: '#E9F0F8', // Your primaryLight color
-          backgroundType: 'solid', // New field
-          gradientColors: null, // New field for gradient colors
+          backgroundColor: '#E9F0F8', // primaryLight
+          backgroundType: 'solid',
+          gradientColors: null,
+          profileType: 'animal', // 'animal' | 'photo'
+          customImageUrl: null,
           useCustom: false
         },
         createdAt: new Date(),

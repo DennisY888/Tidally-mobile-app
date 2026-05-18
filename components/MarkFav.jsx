@@ -1,42 +1,49 @@
 // components/MarkFav.jsx
 
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Alert } from 'react-native';
 import React from 'react';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { useRealtimeFavorites } from '../hooks/useRealtimeFavorites'; // <-- Use the new hook
+import { useRealtimeFavorites } from '../hooks/useRealtimeFavorites';
 
 export default function MarkFav({ workout }) {
-  // 1. Get real-time data and the update function from our central hook
   const { favIds, updateFavorites, isLoaded } = useRealtimeFavorites();
-
-  // 2. Determine if the current workout is a favorite
   const isFavorite = favIds.includes(workout.id);
 
-
-  const handleToggleFavorite = async () => {
-    let newFavIds;
-    if (isFavorite) {
-      // Remove from favorites
-      newFavIds = favIds.filter(id => id !== workout.id);
-    } else {
-      // Add to favorites
-      newFavIds = [...favIds, workout.id];
-    }
-    // 3. Call the central update function. The onSnapshot listener will handle the UI update.
-    await updateFavorites(newFavIds);
+  const removeFromFavorites = async () => {
+    await updateFavorites(favIds.filter(id => id !== workout.id));
   };
 
-  // Don't render until the favorites list is loaded
+  const addToFavorites = async () => {
+    await updateFavorites([...favIds, workout.id]);
+  };
+
+  const handlePress = () => {
+    if (isFavorite) {
+      // Confirm before un-favoriting so a stray tap doesn't lose the user's saved workout
+      Alert.alert(
+        'Remove from Favorites?',
+        `"${workout.title || 'This workout'}" will be removed from your favorites.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Remove', style: 'destructive', onPress: removeFromFavorites },
+        ],
+        { cancelable: true }
+      );
+    } else {
+      addToFavorites();
+    }
+  };
+
   if (!isLoaded) {
     return <View />;
   }
 
   return (
-    <Pressable onPressIn={handleToggleFavorite}>
+    <Pressable onPress={handlePress} hitSlop={8}>
       {isFavorite ? (
         <AntDesign name="heart" size={24} color="red" />
       ) : (
-        <AntDesign name="hearto" size={24} color="white" /> // Changed to white for better visibility on image
+        <AntDesign name="hearto" size={24} color="white" />
       )}
     </Pressable>
   );

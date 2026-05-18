@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Tidally uses Clerk for authentication, NOT Firebase Auth.
+// `request.auth` is therefore always null inside these rules, so we
+// cannot enforce per-user ownership here. We restrict to the four
+// collections the client actually uses and deny everything else
+// (the previous Console rule allowed ALL document paths until an
+// expiry date, which both leaked schema and was a time-bomb).
+//
+// A proper auth-bound ruleset requires minting a Firebase custom token
+// from a Cloud Function that verifies the Clerk JWT, then enforcing
+// `request.auth.uid == <ownerField>`. Tracked as follow-up.
+//
+// The Cloud Function in functions/index.js uses firebase-admin, which
+// bypasses these rules entirely — so server-side searchIndex writes
+// keep working regardless of what we put here.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Workout definitions — doc id is a timestamp string.
+    match /Routines/{routineId} {
+      allow read, write: if true;
+    }
+
+    // User profile (customProfile, etc.) — doc id is the user's email.
+    match /Users/{userEmail} {
+      allow read, write: if true;
+    }
+
+    // Per-user favorites list — doc id is the user's email.
+    match /Favorites/{userEmail} {
+      allow read, write: if true;
+    }
+
+    // Workout categories / folders.
+    match /Category/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // Deny-by-default for any other document path. Prevents random
+    // unknown collections from being created via direct client calls.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

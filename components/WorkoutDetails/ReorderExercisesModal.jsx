@@ -24,14 +24,18 @@ export default function ReorderExercisesModal({ visible, exercises, onClose, onS
   }, [visible, exercises]);
   
   const renderItem = useCallback(({ item, drag, isActive }) => {
+    // Drag fires the moment the finger touches down — no long-press required.
+    const startDrag = () => {
+      if (isActive) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      drag();
+    };
+
     return (
       <ScaleDecorator>
         <TouchableOpacity
           activeOpacity={0.8}
-          onLongPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            drag();
-          }}
+          onPressIn={startDrag}
           disabled={isActive}
           style={[
             styles.exerciseItem,
@@ -92,16 +96,17 @@ export default function ReorderExercisesModal({ visible, exercises, onClose, onS
 
           <View style={styles.instructionsContainer}>
               <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-              <Text style={[styles.instructionsText, { color: colors.textSecondary }]}>Long-press and drag to re-order</Text>
+              <Text style={[styles.instructionsText, { color: colors.textSecondary }]}>Drag any exercise to re-order</Text>
           </View>
 
-          {/* The list now lives inside the stable layout */}
+          {/* Drag-anywhere reorder: activationDistance kept tiny so a small finger movement triggers it */}
           <DraggableFlatList
             data={orderedExercises}
             onDragEnd={handleDragEnd}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
-            containerStyle={{ flex: 1, padding: Spacing.md }} // Use padding on the container
+            activationDistance={5}
+            containerStyle={{ flex: 1, padding: Spacing.md }}
             contentContainerStyle={{ paddingBottom: Spacing.md }}
           />
         </View>

@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: Spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Spacing.lg,
     paddingHorizontal: Spacing.md
   },
   title: {

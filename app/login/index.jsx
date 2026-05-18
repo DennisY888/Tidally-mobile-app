@@ -108,7 +108,7 @@ export default function LoginScreen() {
       end={{ x: 1, y: 1 }}
       style={styles.gradientContainer}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <Animated.View 
           style={[
             styles.contentContainer, 

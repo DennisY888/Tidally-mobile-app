@@ -6,8 +6,7 @@ import {
   Text, 
   FlatList, 
   TouchableOpacity, 
-  SafeAreaView, 
-  StatusBar, 
+  StatusBar,
   StyleSheet, 
   Animated as RNAnimated, 
   ActivityIndicator,
@@ -171,7 +170,7 @@ export default function WorkoutPlay() {
     <GestureHandlerRootView style={styles.container}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <WaveBackground />
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         {workoutComplete ? (
             <View style={styles.completionContainer}>
                  <Text style={[styles.completionTitle, {color: colors.primary}]}>Workout Complete!</Text>
@@ -206,7 +205,7 @@ export default function WorkoutPlay() {
                 scrollEnabled={true} 
             />
         )}
-      </SafeAreaView>
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -222,8 +221,8 @@ const styles = StyleSheet.create({
     itemWrapper: { paddingHorizontal: 16, marginVertical: 8 },
     
     headerContainer: { marginBottom: 24, paddingHorizontal: 16, paddingTop: 16 },
-    headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 16 },
-    headerTitle: { fontSize: 24, fontFamily: 'outfit-bold', width: '80%' },
+    headerTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, marginTop: 16 },
+    headerTitle: { fontSize: 32, fontFamily: 'outfit-bold', width: '75%', lineHeight: 38 },
     exitButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9999, borderWidth: 1 },
     exitButtonText: { fontSize: 14, fontFamily: 'outfit-medium', marginLeft: 4 },
     headerInfoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

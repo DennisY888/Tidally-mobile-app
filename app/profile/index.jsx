@@ -177,7 +177,17 @@ export default function Profile() {
             onPress={() => setShowCustomizationModal(true)}
             activeOpacity={0.8}
           >
-            {userProfile?.customProfile?.useCustom ? (
+            {userProfile?.customProfile?.useCustom && userProfile?.customProfile?.profileType === 'photo' && userProfile?.customProfile?.customImageUrl ? (
+              <MotiView
+                animate={{ scale: [1, 1.04, 1] }}
+                transition={{ type: 'timing', duration: 4000, repeat: Infinity }}
+              >
+                <Image
+                  source={{ uri: userProfile.customProfile.customImageUrl }}
+                  style={[styles.profileImage, styles.premiumProfileContainer, styles.superGrandProfileContainer, { borderColor: colors.primary + '60' }]}
+                />
+              </MotiView>
+            ) : userProfile?.customProfile?.useCustom ? (
               <MotiView
                 animate={{
                   scale: [1, 1.05, 1],
@@ -420,7 +430,7 @@ export default function Profile() {
 const getStyles = (colors, isDark) => StyleSheet.create({
   backButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
+    top: Spacing.md,
     left: Spacing.lg,
     zIndex: 10,
     width: 44,
@@ -439,7 +449,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
   },
   profileHeader: {
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Spacing.xxl,
     paddingBottom: Spacing.xl,
     paddingHorizontal: Spacing.lg,
     borderBottomLeftRadius: BorderRadius.xl,
