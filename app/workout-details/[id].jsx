@@ -158,7 +158,9 @@ export default function WorkoutDetails() {
                   <Text style={[styles.categoryText, { color: colors.primary }]}>{workout.category}</Text>
                 </View>
               </View>
-              <Text style={[styles.description, { color: colors.textSecondary }]}>{workout.description || 'Complete all sets of each exercise with proper form for best results.'}</Text>
+              {workout.description ? (
+                <Text style={[styles.description, { color: colors.textSecondary }]}>{workout.description}</Text>
+              ) : null}
               <WorkoutStats workout={workout} isDark={isDark} colors={colors} />
               <View style={styles.exerciseList}>
                 <ExercisesList exercises={workoutExercises} onExerciseOptions={handleExerciseOptions} onAddExercise={() => setIsAddModalVisible(true)} isUpdatingOrder={isSaving} onReorderPress={() => setIsReorderModalVisible(true)} />

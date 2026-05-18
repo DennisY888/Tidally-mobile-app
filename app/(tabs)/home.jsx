@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@clerk/clerk-expo';
@@ -115,7 +115,7 @@ export default function Home() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
       <View style={styles.headerTop}>
         <View>
@@ -128,7 +128,14 @@ export default function Home() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/profile')} activeOpacity={0.7}>
-            {userProfile?.customProfile?.useCustom ? (
+            {userProfile?.customProfile?.useCustom && userProfile?.customProfile?.profileType === 'photo' && userProfile?.customProfile?.customImageUrl ? (
+              <MotiView animate={{ scale: [1, 1.08, 1] }} transition={{ type: 'timing', duration: 3000, repeat: Infinity }}>
+                <Image
+                  source={{ uri: userProfile.customProfile.customImageUrl }}
+                  style={[styles.profileImageCustom, styles.premiumProfileButton, styles.grandProfileButton, { borderColor: colors.primary + '50' }]}
+                />
+              </MotiView>
+            ) : userProfile?.customProfile?.useCustom ? (
               <MotiView animate={{ scale: [1, 1.08, 1], rotate: ['0deg', '2deg', '-2deg', '0deg'] }} transition={{ type: 'timing', duration: 3000, repeat: Infinity }}>
                 <View style={[styles.profileImageCustom, styles.premiumProfileButton, styles.grandProfileButton, { borderColor: colors.primary + '50', shadowColor: colors.primary, ...Shadows[isDark ? 'dark' : 'light'].large }]}>
                   {userProfile.customProfile.backgroundType === 'gradient' && userProfile.customProfile.gradientColors ? (
@@ -200,7 +207,7 @@ export default function Home() {
           <Text style={styles.createButtonText}>Create a Workout</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

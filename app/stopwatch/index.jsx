@@ -1,16 +1,16 @@
 // app/stopwatch/index.jsx
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
   StatusBar,
   Platform,
-  SafeAreaView,
   Animated,
-  Easing
+  Easing,
+  ScrollView
 } from 'react-native';
 import { useRouter, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,7 @@ export default function Stopwatch() {
   const navigation = useNavigation();
   
   // State management following existing patterns
+  // elapsedTime is stored in MILLISECONDS for sub-second precision
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -45,22 +46,20 @@ export default function Stopwatch() {
     });
   }, []);
   
-  // Timer logic based on existing CountdownTimer implementation but reversed
+  // Timer logic — store elapsed time in ms for true sub-second precision
   useEffect(() => {
     if (isRunning && !isPaused) {
       if (startTimeRef.current === null) {
-        startTimeRef.current = Date.now() - (elapsedTime * 1000);
+        startTimeRef.current = Date.now() - elapsedTime;
       }
-      
+
       intervalRef.current = setInterval(() => {
-        const currentTime = Date.now();
-        const elapsed = Math.floor((currentTime - startTimeRef.current) / 1000);
-        setElapsedTime(elapsed);
-      }, 10); // 10ms for precise timing
+        setElapsedTime(Date.now() - startTimeRef.current);
+      }, 31); // ~32fps — smooth ticking without overdoing React renders
     } else {
       clearInterval(intervalRef.current);
     }
-    
+
     return () => clearInterval(intervalRef.current);
   }, [isRunning, isPaused]);
 
@@ -94,12 +93,13 @@ export default function Stopwatch() {
   }, [isRunning, isPaused]);
 
   
-  // Format time following existing pattern from WorkoutHeader
-  const formatTime = useCallback((timeInSeconds) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = timeInSeconds % 60;
-    const centiseconds = Math.floor((timeInSeconds * 100) % 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+  // Format ms → MM:SS.mmm (showing real milliseconds, not stuck at .00)
+  const formatTime = useCallback((timeInMs) => {
+    const totalMs = Math.max(0, Math.floor(timeInMs));
+    const minutes = Math.floor(totalMs / 60000);
+    const seconds = Math.floor((totalMs % 60000) / 1000);
+    const milliseconds = totalMs % 1000;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
   }, []);
 
   
@@ -109,7 +109,7 @@ export default function Stopwatch() {
       // Start timer
       setIsRunning(true);
       setIsPaused(false);
-      startTimeRef.current = Date.now() - (elapsedTime * 1000);
+      startTimeRef.current = Date.now() - elapsedTime;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (!isPaused) {
       // Pause timer
@@ -119,7 +119,7 @@ export default function Stopwatch() {
     } else {
       // Resume timer
       setIsPaused(false);
-      startTimeRef.current = Date.now() - (elapsedTime * 1000);
+      startTimeRef.current = Date.now() - elapsedTime;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [isRunning, isPaused, elapsedTime]);
@@ -162,7 +162,7 @@ export default function Stopwatch() {
   const styles = getStyles(colors, isDark);
   
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header following existing pattern */}
@@ -267,17 +267,22 @@ export default function Stopwatch() {
       {laps.length > 0 && (
         <View style={styles.lapsContainer}>
           <Text style={styles.lapsTitle}>Laps</Text>
-          <View style={styles.lapsList}>
+          <ScrollView
+            style={styles.lapsList}
+            contentContainerStyle={styles.lapsListContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
             {laps.map((lap, index) => (
               <View key={index} style={styles.lapItem}>
                 <Text style={styles.lapNumber}>Lap {lap.lapNumber}</Text>
                 <Text style={styles.lapTime}>{formatTime(lap.time)}</Text>
               </View>
             ))}
-          </View>
+          </ScrollView>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -355,10 +360,11 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       ...Shadows.medium,
     },
     timeDisplay: {
-      fontSize: 48,
+      fontSize: 36,
       fontFamily: 'outfit-bold',
       textAlign: 'center',
       letterSpacing: -1,
+      fontVariant: ['tabular-nums'],
     },
     timeLabel: {
       ...Typography.subhead,
@@ -419,7 +425,8 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       marginHorizontal: Spacing.lg,
       marginBottom: Spacing.xl,
       borderRadius: BorderRadius.lg,
-      maxHeight: 200,
+      maxHeight: 240,
+      overflow: 'hidden',
       ...Shadows.medium,
     },
     lapsTitle: {
@@ -431,7 +438,10 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       fontFamily: 'outfit-medium',
     },
     lapsList: {
-      maxHeight: 150,
+      maxHeight: 190,
+    },
+    lapsListContent: {
+      paddingBottom: Spacing.xs,
     },
     lapItem: {
       flexDirection: 'row',

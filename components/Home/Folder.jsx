@@ -57,7 +57,7 @@ export default function Folder({ category, user }) {
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       setCategoryList(data);
-      setPaginatedCategories(chunkArray(data, 6)); 
+      setPaginatedCategories(chunkArray(data, 4));
     } catch (error) {
       console.error("Error fetching categories:", error);
     } finally {
@@ -222,7 +222,7 @@ export default function Folder({ category, user }) {
 
       {loading ? (
         <View style={styles.gridContainer}>
-          {Array(6).fill(0).map((_, index) => (
+          {Array(4).fill(0).map((_, index) => (
             <View key={`placeholder-${index}`} style={[styles.categoryCard, styles.placeholderContainer]} />
           ))}
         </View>
@@ -317,7 +317,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       flexWrap: 'wrap',
     },
     categoryCard: {
-      width: '33.333%',
+      width: '50%',
       padding: Spacing.sm,
       aspectRatio: 1,
     },
@@ -339,8 +339,8 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       paddingBottom: Spacing.xs,     
     },
     iconContainerLarge: {
-      width: 40,   
-      height: 40,
+      width: 64,
+      height: 64,
       borderRadius: BorderRadius.sm,
       justifyContent: 'center',
       alignItems: 'center',
@@ -352,7 +352,7 @@ const getStyles = (colors, isDark) => StyleSheet.create({
       paddingBottom: Spacing.xl
     },
     categoryTextLarge: {
-      ...Typography.caption1,
+      ...Typography.subhead,
       textAlign: 'center',
       fontFamily: 'outfit-medium',
       paddingTop: Spacing.sm

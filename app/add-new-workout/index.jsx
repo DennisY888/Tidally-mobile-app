@@ -1,17 +1,21 @@
 // app/add-new-workout/index.jsx
 import React, { useEffect, useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  Image, 
-  StyleSheet, 
-  ScrollView, 
-  Pressable, 
-  ToastAndroid, 
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  ToastAndroid,
   Animated,
   Platform,
   Alert,
-  TouchableOpacity
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Keyboard,
+  InputAccessoryView,
+  Button,
 } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
@@ -31,6 +35,8 @@ import ActionButton from '../../components/UI/ActionButton';
 import AnimatedHeader from '../../components/UI/AnimatedHeader';
 import { showToast, calculateWorkoutDuration } from '../../utils/helpers';
 
+const DONE_BAR_ID = 'workout-form-done-bar';
+
 
 /**
  * Add New Workout Screen
@@ -48,6 +54,7 @@ export default function AddNewWorkout() {
   const [categoryList, setCategoryList] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState();
   const [image, setImage] = useState();
+  const [imageError, setImageError] = useState(false);
   const [loader, setLoader] = useState(false);
   
   // Exercise state
@@ -134,6 +141,7 @@ export default function AddNewWorkout() {
       
       if (!result.canceled) {
         setImage(result.assets[0].uri);
+        setImageError(false);
       }
     } catch (error) {
       console.error("Image picker error:", error);
@@ -195,7 +203,14 @@ export default function AddNewWorkout() {
    * Validate form and start upload process
    */
   const onSubmit = () => {
-    if (!formData.title || !formData.category || !image) {
+    const missingImage = !image;
+    setImageError(missingImage);
+
+    if (!formData.title || !formData.category || missingImage) {
+      if (missingImage && formData.title && formData.category) {
+        // Image is the only thing missing — let the red glow speak for itself
+        return;
+      }
       showToast('Please Enter All Details');
       return;
     }
@@ -271,16 +286,23 @@ export default function AddNewWorkout() {
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
       {/* Animated Header */}
-      <AnimatedHeader 
+      <AnimatedHeader
         title="New Workout"
         scrollY={scrollY}
         onBackPress={() => router.back()}
       />
-      
-      <ScrollView 
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
@@ -301,20 +323,41 @@ export default function AddNewWorkout() {
           
           {/* Image Picker */}
           <View style={styles.imagePickerContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Cover Image *</Text>
-            <Pressable 
+            <Text style={[styles.label, { color: imageError ? colors.error : colors.text }]}>Cover Image *</Text>
+            <Pressable
               onPress={imagePicker}
-              style={[styles.imagePicker, { borderColor: colors.divider }]}
+              style={[
+                styles.imagePicker,
+                { borderColor: imageError ? colors.error : colors.divider },
+                imageError && {
+                  borderWidth: 2,
+                  shadowColor: colors.error,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.7,
+                  shadowRadius: 10,
+                  elevation: 8,
+                },
+              ]}
             >
               {!image ? (
-                <View style={[styles.placeholderImage, { backgroundColor: colors.lightGray }]}>
-                  <Ionicons name="image-outline" size={40} color={colors.textTertiary} />
-                  <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>
-                    Tap to select image
+                <View style={[
+                  styles.placeholderImage,
+                  { backgroundColor: imageError ? colors.error + '15' : colors.lightGray }
+                ]}>
+                  <Ionicons
+                    name="image-outline"
+                    size={40}
+                    color={imageError ? colors.error : colors.textTertiary}
+                  />
+                  <Text style={[
+                    styles.placeholderText,
+                    { color: imageError ? colors.error : colors.textSecondary }
+                  ]}>
+                    {imageError ? 'Cover image required' : 'Tap to select image'}
                   </Text>
                 </View>
               ) : (
-                <Image 
+                <Image
                   source={{ uri: image }}
                   style={styles.selectedImage}
                 />
@@ -409,12 +452,13 @@ export default function AddNewWorkout() {
             {/* Reps or Time Input */}
             <FormField
               label={measurementType === 'reps' ? 'Repetitions *' : 'Duration (seconds) *'}
-              placeholder={measurementType === 'reps' ? 
-                "Enter number of repetitions" : 
+              placeholder={measurementType === 'reps' ?
+                "Enter number of repetitions" :
                 "Enter time in seconds"}
               keyboardType="number-pad"
-              value={measurementType === 'reps' ? 
-                currentExercise.reps?.toString() : 
+              inputAccessoryViewID={Platform.OS === 'ios' ? DONE_BAR_ID : undefined}
+              value={measurementType === 'reps' ?
+                currentExercise.reps?.toString() :
                 currentExercise.time?.toString()}
               onChangeText={(value) => {
                 const numValue = parseInt(value);
@@ -424,12 +468,13 @@ export default function AddNewWorkout() {
                 );
               }}
             />
-            
+
             {/* Sets Input */}
             <FormField
               label="Sets *"
               placeholder="Enter number of sets"
               keyboardType="number-pad"
+              inputAccessoryViewID={Platform.OS === 'ios' ? DONE_BAR_ID : undefined}
               value={currentExercise.sets?.toString()}
               onChangeText={(value) => {
                 const numValue = parseInt(value);
@@ -479,6 +524,15 @@ export default function AddNewWorkout() {
           />
         </Animated.View>
       </ScrollView>
+      </KeyboardAvoidingView>
+
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={DONE_BAR_ID}>
+          <View style={[styles.doneBar, { backgroundColor: colors.backgroundSecondary, borderTopColor: colors.divider }]}>
+            <Button title="Done" onPress={Keyboard.dismiss} color={colors.primary} />
+          </View>
+        </InputAccessoryView>
+      )}
     </View>
   );
 }
@@ -579,5 +633,13 @@ const styles = StyleSheet.create({
     ...Typography.subhead,
     marginLeft: 4,
     fontFamily: 'outfit-medium', // Use medium weight for emphasis
+  },
+  doneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderTopWidth: 1,
   },
 });

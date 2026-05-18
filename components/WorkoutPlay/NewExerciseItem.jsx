@@ -155,15 +155,15 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     titleContainer: { flex: 1 },
-    exerciseTitle: { fontSize: 18, fontFamily: 'outfit-bold' },
-    subtitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-    subtitleText: { fontSize: 14, fontFamily: 'outfit' },
+    exerciseTitle: { fontSize: 24, fontFamily: 'outfit-bold', lineHeight: 30 },
+    subtitleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+    subtitleText: { fontSize: 16, fontFamily: 'outfit' },
     dotsContainer: { flexDirection: 'row', alignItems: 'center', marginLeft: 12, gap: 6 },
     dot: { width: 8, height: 8, borderRadius: 4 },
     activeDotScale: { transform: [{ scale: 1.5 }] },
     contentContainer: { marginTop: 16 },
     completedContainer: { alignItems: 'center', paddingVertical: 32 },
-    completedText: { fontSize: 18, fontFamily: 'outfit-bold', marginTop: 8 },
+    completedText: { fontSize: 22, fontFamily: 'outfit-bold', marginTop: 8 },
 });
 
 export default NewExerciseItem;

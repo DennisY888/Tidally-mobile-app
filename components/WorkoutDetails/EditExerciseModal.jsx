@@ -1,18 +1,24 @@
 // components/WorkoutDetails/EditExerciseModal.jsx
 
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  TextInput, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  StyleSheet,
+  TextInput,
   Alert,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Keyboard,
+  InputAccessoryView,
+  Button,
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
+
+const EDIT_EX_DONE_BAR = 'edit-exercise-done-bar';
 
 export default function EditExerciseModal({ visible, onClose, exercise, onSave }) {
   // Don't render when not visible
@@ -78,11 +84,13 @@ export default function EditExerciseModal({ visible, onClose, exercise, onSave }
   };
 
   return (
-    <View style={styles.modalContainer}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoid}
-      >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardAvoid}
+        >
+        <TouchableWithoutFeedback>
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
@@ -146,6 +154,7 @@ export default function EditExerciseModal({ visible, onClose, exercise, onSave }
               value={reps}
               onChangeText={setReps}
               keyboardType="number-pad"
+              inputAccessoryViewID={Platform.OS === 'ios' ? EDIT_EX_DONE_BAR : undefined}
               placeholderTextColor={Colors.light.textTertiary}
             />
           ) : (
@@ -155,6 +164,7 @@ export default function EditExerciseModal({ visible, onClose, exercise, onSave }
               value={time}
               onChangeText={setTime}
               keyboardType="number-pad"
+              inputAccessoryViewID={Platform.OS === 'ios' ? EDIT_EX_DONE_BAR : undefined}
               placeholderTextColor={Colors.light.textTertiary}
             />
           )}
@@ -166,6 +176,7 @@ export default function EditExerciseModal({ visible, onClose, exercise, onSave }
             value={sets}
             onChangeText={setSets}
             keyboardType="number-pad"
+            inputAccessoryViewID={Platform.OS === 'ios' ? EDIT_EX_DONE_BAR : undefined}
             placeholderTextColor={Colors.light.textTertiary}
           />
 
@@ -186,8 +197,18 @@ export default function EditExerciseModal({ visible, onClose, exercise, onSave }
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+        </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+
+        {Platform.OS === 'ios' && (
+          <InputAccessoryView nativeID={EDIT_EX_DONE_BAR}>
+            <View style={styles.doneBar}>
+              <Button title="Done" onPress={Keyboard.dismiss} color={Colors.light.primary} />
+            </View>
+          </InputAccessoryView>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -296,5 +317,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'outfit-medium',
+  },
+  doneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: '#F1F1F4',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#D5D5DA',
   },
 });

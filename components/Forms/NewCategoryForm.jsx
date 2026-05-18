@@ -26,6 +26,7 @@ export default function NewCategoryForm({ onCategoryCreated }) {
   const { colors } = useTheme();
   const { user } = useUser();
   const [image, setImage] = useState(null);
+  const [imageError, setImageError] = useState(false);
   const [categoryName, setCategoryName] = useState('');
   const [loader, setLoader] = useState(false);
 
@@ -49,6 +50,7 @@ export default function NewCategoryForm({ onCategoryCreated }) {
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
+      setImageError(false);
     }
   };
 
@@ -56,9 +58,14 @@ export default function NewCategoryForm({ onCategoryCreated }) {
    * Handles the entire category creation process: validation, image upload, and Firestore document creation.
    */
   const handleCreate = async () => {
-    // 1. Validate input: Ensure all required fields are filled.
-    if (!categoryName.trim() || !image) {
-      showToast('Please provide a name and an icon for the folder.');
+    const missingImage = !image;
+    const missingName = !categoryName.trim();
+    setImageError(missingImage);
+
+    if (missingName || missingImage) {
+      if (missingName) {
+        showToast('Please provide a folder name.');
+      }
       return;
     }
     setLoader(true);
@@ -104,13 +111,30 @@ export default function NewCategoryForm({ onCategoryCreated }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.backgroundSecondary, borderColor: colors.divider }]}>
-      <TouchableOpacity onPress={imagePicker} style={[styles.imagePicker, { backgroundColor: colors.background, borderColor: colors.divider }]}>
+      <TouchableOpacity
+        onPress={imagePicker}
+        style={[
+          styles.imagePicker,
+          {
+            backgroundColor: imageError ? colors.error + '15' : colors.background,
+            borderColor: imageError ? colors.error : colors.divider,
+          },
+          imageError && {
+            borderWidth: 2,
+            shadowColor: colors.error,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.7,
+            shadowRadius: 8,
+            elevation: 6,
+          },
+        ]}
+      >
         {image ? (
           <Image source={{ uri: image }} style={styles.image} />
         ) : (
           <View style={styles.placeholderContainer}>
-              <Ionicons name="image-outline" size={30} color={colors.textTertiary} />
-              <Text style={[styles.placeholderText, {color: colors.textSecondary}]}>Icon</Text>
+              <Ionicons name="image-outline" size={30} color={imageError ? colors.error : colors.textTertiary} />
+              <Text style={[styles.placeholderText, {color: imageError ? colors.error : colors.textSecondary}]}>Icon</Text>
           </View>
         )}
       </TouchableOpacity>

@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Tidally uses Clerk for authentication, NOT Firebase Auth.
+// That means `request.auth` is always null inside these rules and we
+// cannot tie writes to a user identity here. We therefore restrict by
+// path and apply size + contentType guards. A stricter setup would
+// mint a Firebase custom token from a Cloud Function that validates
+// the Clerk JWT, then enforce `request.auth.uid == ownerId`.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ---- Helpers ----
+
+    // Caps file size and requires an image MIME type on create/update.
+    // request.resource is null on delete, so callers must skip this for delete.
+    function isImageUnder(maxBytes) {
+      return request.resource != null
+        && request.resource.size < maxBytes
+        && request.resource.contentType is string
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // ---- Workout cover images (created in app/add-new-workout) ----
+    // Path used by services/WorkoutService.js + app/add-new-workout/index.jsx
+    match /Tidally/{file} {
+      allow read: if true;
+      allow create, update: if isImageUnder(10 * 1024 * 1024);
+      allow delete: if true;
+    }
+
+    // ---- Per-user folder/category icons ----
+    // Path used by services/WorkoutService.js + components/Forms/NewCategoryForm.jsx
+    match /category-icons/{userId}/{file} {
+      allow read: if true;
+      allow create, update: if isImageUnder(5 * 1024 * 1024);
+      allow delete: if true;
+    }
+
+    // ---- Per-user profile photos ----
+    // Path used by components/Profile/ProfileCustomizationModal.jsx
+    // The folder name is the user's email (used purely as a folder key
+    // because we have no Firebase Auth uid to bind to).
+    match /profile-photos/{userEmail}/{file} {
+      allow read: if true;
+      allow create, update: if isImageUnder(5 * 1024 * 1024);
+      allow delete: if true;
+    }
+
+    // ---- Deny-by-default ----
+    // Anything outside the whitelisted paths above is rejected.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
