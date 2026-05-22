@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- App icon wrapper: places the brand logo (login.svg / logoWITHName.svg)
+     on a solid blue background matching the login screen gradient.
+     Rendered to assets/images/icon.png at 1024x1024 via rsvg-convert.
+     Opaque background = no alpha, as required by the App Store icon. -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4C87B8"/>
+      <stop offset="0.5" stop-color="#629CCB"/>
+      <stop offset="1" stop-color="#7FB1DE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <image xlink:href="login.svg" x="20" y="20" width="984" height="984"/>
+</svg>
