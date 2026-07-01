@@ -3,6 +3,7 @@
     "name": "tidally",
     "slug": "tidally",
     "version": "1.0.0",
+    "icon": "./assets/images/icon.png",
     "orientation": "portrait",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
@@ -20,7 +21,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#6fc5ff"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO"
