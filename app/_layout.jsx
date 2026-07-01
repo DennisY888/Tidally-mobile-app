@@ -16,6 +16,12 @@ import { FavoritesProvider } from '../hooks/useRealtimeFavorites';
 import { WorkoutDetailProvider } from '../context/WorkoutDetailContext';
 import { UserProfileProvider } from '../context/UserProfileContext';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import DiagnosticsButton from '../components/DiagnosticsButton';
+import { installConsoleCapture } from '../services/DiagnosticsService';
+
+// Mirror console output into the in-app diagnostics buffer from app boot, so a
+// TestFlight tester can export logs the release build's console won't show them.
+installConsoleCapture();
 
 
 // Token cache implementation for Clerk
@@ -155,6 +161,7 @@ export default function RootLayout() {
                         <Stack.Screen name="login/index" options={{ headerShown: false }} />
                         <Stack.Screen name="stopwatch/index" options={{ headerShown: false }} />
                       </Stack>
+                      <DiagnosticsButton />
                     </ThemedApp>
                 </UserProfileProvider>
               </WorkoutDetailProvider>
