@@ -1,6 +1,6 @@
 // services/WorkoutService.js
 
-import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, writeBatch, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, query, where, limit, orderBy, startAfter } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -179,56 +179,6 @@ getAllDocuments: async () => {
 },
 
 
-/**
-   * Updates the image for a specific category.
-   * @param {string} categoryId - The Firestore document ID of the category to update.
-   * @param {string} userId - The authenticated user's ID.
-   * @returns {Promise<boolean>} Success status.
-   */
-  updateCategoryImage: async (categoryId, userId) => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permissionResult.granted === false) {
-        return false;
-      }
-
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
-      if (result.canceled) {
-        return false; 
-      }
-
-      const imageUri = result.assets[0].uri;
-
-      const compressedImage = await manipulateAsync(
-        imageUri,
-        [{ resize: { width: 200 } }],
-        { compress: 0.8, format: SaveFormat.JPEG }
-      );
-      const resp = await fetch(compressedImage.uri);
-      const blobImage = await resp.blob();
-
-      const storageRef = ref(storage, `category-icons/${userId}/${Date.now()}.jpg`);
-      await uploadBytes(storageRef, blobImage);
-      const downloadUrl = await getDownloadURL(storageRef);
-
-      const docRef = doc(db, 'Category', categoryId);
-      await updateDoc(docRef, { imageUrl: downloadUrl });
-      
-      return true;
-
-    } catch (error) {
-      console.error("Error updating category image:", error);
-      return false;
-    }
-  },
-
-
 searchWorkouts: async (searchTerm, userEmail) => {
     try {
       const lowercasedTerm = searchTerm.toLowerCase().trim();
@@ -367,90 +317,26 @@ searchWorkouts: async (searchTerm, userEmail) => {
     }
   },
 
-
   /**
-   * Update category name
-   * @param {string} oldName - Current category name
-   * @param {string} newName - New category name  
-   * @param {string} userEmail - User email for security
-   * @returns {Promise<boolean>} Success status
+   * Record that a workout was opened/started, powering the "Last used" sort.
+   * @param {string} workoutId - The workout's `id` field.
+   * @param {string} userEmail - Owner email, for the security-scoped lookup.
+   * @returns {Promise<boolean>} Success status.
    */
-  updateCategoryName: async (oldName, newName, userEmail) => {
+  markWorkoutOpened: async (workoutId, userEmail) => {
     try {
-      const categoryQuery = query(
-        collection(db, 'Category'),
-        where('name', '==', oldName),
-        where('userEmail', '==', userEmail)
-      );
-      const categorySnapshot = await getDocs(categoryQuery);
-      
-      if (categorySnapshot.empty) return false;
-      
-      const categoryDoc = categorySnapshot.docs[0];
-      await updateDoc(categoryDoc.ref, { name: newName });
-      
-      const workoutsQuery = query(
+      const q = query(
         collection(db, 'Routines'),
-        where('category', '==', oldName),
+        where('id', '==', workoutId),
         where('user.email', '==', userEmail)
       );
-      const workoutsSnapshot = await getDocs(workoutsQuery);
-      
-      const batch = writeBatch(db);
-      workoutsSnapshot.docs.forEach(doc => {
-        batch.update(doc.ref, { category: newName });
-      });
-      await batch.commit();
-      
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return false;
+
+      await updateDoc(snapshot.docs[0].ref, { lastOpenedAt: new Date() });
       return true;
     } catch (error) {
-      console.error(`Error updating category name:`, error);
-      return false;
-    }
-  },
-
-
-  /**
-   * Delete a category and handle workouts in that category
-   * 
-   * @param {string} categoryName - Name of the category to delete
-   * @param {string} userEmail - Email of the user (for security)
-   * @param {string} reassignCategory - Category to reassign workouts to
-   * @returns {Promise<boolean>} Success status
-   */
-  deleteCategory: async (categoryName, userEmail, reassignCategory = 'Uncategorized') => {
-    try {
-      // Find category document
-      const categoryQuery = query(
-        collection(db, 'Category'),
-        where('name', '==', categoryName),
-        where('userEmail', '==', userEmail)
-      );
-      const categorySnapshot = await getDocs(categoryQuery);
-      
-      if (categorySnapshot.empty) {
-        console.log("Category not found or not owned by user");
-        return false;
-      }
-      
-      const workoutsQuery = query(
-        collection(db, 'Routines'),
-        where('category', '==', categoryName),
-        where('user.email', '==', userEmail)
-      );
-      const workoutsSnapshot = await getDocs(workoutsQuery);
-      
-      const batch = writeBatch(db);
-      workoutsSnapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
-      
-      await deleteDoc(categorySnapshot.docs[0].ref);
-      
-      return true;
-    } catch (error) {
-      console.error(`Error deleting category ${categoryName}:`, error);
+      console.error('Error marking workout opened:', error);
       return false;
     }
   }
