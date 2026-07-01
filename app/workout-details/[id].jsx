@@ -80,6 +80,9 @@ export default function WorkoutDetails() {
     if (!workout) return;
     try {
       await WorkoutSessionService.deleteSession(workout.id);
+
+      // Record "last used" for the home-screen sort (fire-and-forget).
+      WorkoutService.markWorkoutOpened(workout.id, workout.user?.email);
       
       setPlaybackWorkout({
         ...workout,
@@ -154,9 +157,6 @@ export default function WorkoutDetails() {
             <View style={styles.workoutInfo}>
               <View style={styles.titleContainer}>
                 <Text style={[styles.title, { color: colors.text }]}>{workout.title}</Text>
-                <View style={[styles.categoryBadge, { backgroundColor: colors.primaryLight }]}>
-                  <Text style={[styles.categoryText, { color: colors.primary }]}>{workout.category}</Text>
-                </View>
               </View>
               {workout.description ? (
                 <Text style={[styles.description, { color: colors.textSecondary }]}>{workout.description}</Text>

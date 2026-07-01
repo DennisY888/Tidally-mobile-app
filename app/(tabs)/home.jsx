@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,6 @@ import { debounce } from 'lodash';
 import { MotiView } from 'moti';
 import { useTheme } from '../../context/ThemeContext';
 import { Typography, BorderRadius, Shadows, Spacing } from '../../constants/Colors';
-import Folder from '../../components/Home/Folder';
 import { WorkoutService } from '../../services/WorkoutService';
 import HighlightedText from '../../components/UI/HighlightedText';
 import { useWorkouts } from '../../hooks/useWorkouts';
@@ -25,8 +24,26 @@ const getGreeting = () => {
   return "Good evening,";
 };
 
+// Client-side sort options for the workout library. Everything shown on the home
+// screen is already loaded, so sorting locally avoids extra Firestore indexes.
+const SORT_OPTIONS = [
+  { key: 'recent', label: 'Recent' },
+  { key: 'az', label: 'A–Z' },
+  { key: 'lastUsed', label: 'Last used' },
+];
+
+// A workout's timestamp fields may be a Firestore Timestamp, a JS Date, or an epoch
+// number depending on how/when they were written; normalize any of them to millis.
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  return 0;
+};
+
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [sortKey, setSortKey] = useState('recent');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -38,12 +55,29 @@ export default function Home() {
   const { colors, isDark } = useTheme();
   const styles = getStyles(colors, isDark, insets);
   
-  const { workouts, loading } = useWorkouts(selectedCategory);
+  const { workouts, loading } = useWorkouts();
 
   const { setActiveWorkout } = useActiveWorkout();
   const { userProfile } = useUserProfile();
   const userName = user?.fullName || user?.firstName || 'User';
   const greeting = getGreeting();
+
+  // `id` is the creation-time epoch string, so numeric desc = newest first.
+  const sortedWorkouts = useMemo(() => {
+    const list = [...workouts];
+    switch (sortKey) {
+      case 'az':
+        return list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      case 'lastUsed':
+        return list.sort((a, b) =>
+          toMillis(b.lastOpenedAt) - toMillis(a.lastOpenedAt) ||
+          Number(b.id || 0) - Number(a.id || 0)
+        );
+      case 'recent':
+      default:
+        return list.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    }
+  }, [workouts, sortKey]);
 
   const getMatchContext = (workout, term) => {
     const lowercasedTerm = term.toLowerCase().trim();
@@ -105,9 +139,7 @@ export default function Home() {
                 Matches: <HighlightedText text={matchContext} highlight={searchTerm} style={{ fontFamily: 'outfit-medium' }}/>
               </Text>
             </View>
-          ) : (
-            <Text style={styles.workoutSubtitle} numberOfLines={1}>{workout.category}</Text>
-          )}
+          ) : null}
           <Text style={styles.workoutMeta}>{workout.exercises?.length || 0} exercises • {workout.est_time || '?'} min</Text>
         </View>
       </TouchableOpacity>
@@ -169,7 +201,7 @@ export default function Home() {
       </View>
 
       <FlatList
-        data={isSearching ? searchResults : workouts}
+        data={isSearching ? searchResults : sortedWorkouts}
         renderItem={({ item }) => isSearching ? renderSearchResultItem({ item }) : <Workout workout={item} layout='row' />}
         keyExtractor={(item) => item.id || item._id}
         contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 120 }}
@@ -177,16 +209,26 @@ export default function Home() {
           isSearching ? (
             <View style={styles.section}><Text style={styles.sectionTitle}>Search Results</Text></View>
           ) : (
-            <>
-              <Folder
-                category={(value) => setSelectedCategory(value)}
-                selectedCategory={selectedCategory}
-                user={user}
-              />
-              {workouts.length > 0 && (
-                <View style={styles.section}><Text style={styles.sectionTitle}>{selectedCategory || 'Your Workouts'}</Text></View>
-              )}
-            </>
+            workouts.length > 0 && (
+              <View style={styles.librarySection}>
+                <Text style={styles.libraryTitle}>Your Workouts</Text>
+                <View style={styles.sortRow}>
+                  {SORT_OPTIONS.map((opt) => {
+                    const active = sortKey === opt.key;
+                    return (
+                      <TouchableOpacity
+                        key={opt.key}
+                        style={[styles.sortPill, active && styles.sortPillActive]}
+                        onPress={() => setSortKey(opt.key)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.sortPillText, active && styles.sortPillTextActive]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )
           )
         }
         ListEmptyComponent={
@@ -222,6 +264,13 @@ const getStyles = (colors, isDark, insets) => StyleSheet.create({
   searchInput: { height: 52, borderWidth: 0, borderRadius: BorderRadius.xl, paddingHorizontal: Spacing.xl, backgroundColor: colors.backgroundSecondary, color: colors.text, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
   section: { paddingTop: Spacing.lg },
   sectionTitle: { ...Typography.title2, color: colors.text, marginBottom: Spacing.md, paddingHorizontal: Spacing.lg },
+  librarySection: { paddingTop: Spacing.lg, marginBottom: Spacing.xs },
+  libraryTitle: { ...Typography.title2, color: colors.text, marginBottom: Spacing.md },
+  sortRow: { flexDirection: 'row', gap: Spacing.sm },
+  sortPill: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: BorderRadius.full, backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.divider },
+  sortPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  sortPillText: { ...Typography.subhead, color: colors.textSecondary },
+  sortPillTextActive: { color: '#fff', fontFamily: 'outfit-medium' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
   workoutItem: { flexDirection: 'row', backgroundColor: colors.background, borderRadius: BorderRadius.lg, marginBottom: Spacing.md, ...Shadows.small, elevation: isDark ? 1 : 3 },
   workoutImage: { width: 100, height: '100%', backgroundColor: colors.backgroundSecondary, borderTopLeftRadius: BorderRadius.lg, borderBottomLeftRadius: BorderRadius.lg },

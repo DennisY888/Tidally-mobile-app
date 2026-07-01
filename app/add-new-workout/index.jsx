@@ -21,7 +21,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { collection, doc, getDocs, setDoc, serverTimestamp, addDoc, query, where } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useUser } from '@clerk/clerk-expo';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
@@ -51,8 +51,6 @@ export default function AddNewWorkout() {
   
   // Form state
   const [formData, setFormData] = useState({});
-  const [categoryList, setCategoryList] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState();
   const [image, setImage] = useState();
   const [imageError, setImageError] = useState(false);
   const [loader, setLoader] = useState(false);
@@ -78,7 +76,6 @@ export default function AddNewWorkout() {
       headerShown: false
     });
     
-    getCategories();
     
     // Animate form appearance
     Animated.parallel([
@@ -95,39 +92,7 @@ export default function AddNewWorkout() {
     ]).start();
   }, [user]);
   
-  /**
-   * Fetch categories from Firestore
-   */
-  const getCategories = async() => {
-    setCategoryList([]);
-    try {
-      if (!user?.primaryEmailAddress?.emailAddress) {
-        console.log("No user found, cannot fetch categories.");
-        return;
-      }
-      
-      const q = query(
-        collection(db, 'Category'),
-        where('userEmail', '==', user.primaryEmailAddress.emailAddress)
-      );
-      const snapshot = await getDocs(q);
-      const categories = [];
-      snapshot.forEach((doc) => {
-        categories.push(doc.data());
-      });
-      setCategoryList(categories);
-      
-      if (categories.length > 0) {
-        setSelectedCategory(categories[0].name);
-        handleInputChange('category', categories[0].name);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      showToast("Failed to load categories");
-    }
-  };
-  
-  /**
+/**
    * Launch image picker to select workout image
    */
   const imagePicker = async() => {
@@ -206,8 +171,8 @@ export default function AddNewWorkout() {
     const missingImage = !image;
     setImageError(missingImage);
 
-    if (!formData.title || !formData.category || missingImage) {
-      if (missingImage && formData.title && formData.category) {
+    if (!formData.title || missingImage) {
+      if (missingImage && formData.title) {
         // Image is the only thing missing — let the red glow speak for itself
         return;
       }
@@ -371,37 +336,6 @@ export default function AddNewWorkout() {
             placeholder="Enter workout name"
             onChangeText={(value) => handleInputChange('title', value)}
           />
-          
-          {/* Category Selector */}
-          <View style={styles.inputContainer}>
-            {/* This new container allows the label and button to sit side-by-side. */}
-            <View style={styles.labelContainer}>
-              <Text style={[styles.label, { color: colors.text }]}>Category *</Text>
-            </View>
-            <View style={[styles.pickerContainer, { 
-              backgroundColor: colors.backgroundSecondary,
-              borderColor: colors.divider 
-            }]}>
-              <Picker
-                selectedValue={selectedCategory}
-                style={[styles.picker, { color: colors.text }]}
-                dropdownIconColor={colors.primary}
-                onValueChange={(itemValue) => {
-                  setSelectedCategory(itemValue);
-                  handleInputChange('category', itemValue);
-                }}
-              >
-                {categoryList.map((category, index) => (
-                  <Picker.Item 
-                    key={index} 
-                    label={category.name} 
-                    value={category.name}
-                    color={Platform.OS === 'ios' ? colors.text : undefined}
-                  />
-                ))}
-              </Picker>
-            </View>
-          </View>
           
           {/* Exercises Section */}
           <View style={styles.sectionContainer}>

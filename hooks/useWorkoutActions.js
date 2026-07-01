@@ -22,7 +22,7 @@ export const useWorkoutActions = (workout, workoutExercises, setWorkoutExercises
         return `${index + 1}. ${exercise.name} - ${exerciseDetail}`;
       }).join('\n') || 'No exercises listed';
 
-      const shareMessage = `🏋️ ${workout.title}\n\n💪 Workout Details:\n${exercisesList}\n\n⏱️ Estimated Duration: ${workout.est_time || '?'} minutes\n📂 Category: ${workout.category || 'Uncategorized'}\n\n📱 Created with Tidally`;
+      const shareMessage = `🏋️ ${workout.title}\n\n💪 Workout Details:\n${exercisesList}\n\n⏱️ Estimated Duration: ${workout.est_time || '?'} minutes\n\n📱 Created with Tidally`;
 
       await Share.share({ message: shareMessage });
     } catch (error) { console.error("Error sharing:", error); }
